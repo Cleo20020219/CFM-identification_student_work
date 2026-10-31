@@ -86,7 +86,7 @@ def test_complete_business_negative_materials_never_reach_native_compilation(mon
     ('missing_population','NEEDS_INPUT'),('missing_remaining_source','NEEDS_INPUT'),
     ('unknown_science','NEEDS_INPUT'),('undecided_science','NEEDS_INPUT'),
     ('rejected_science','ADAPTER_NOT_CONNECTED'),('conflicting_science','READING_RECHECK_REQUIRED'),
-    ('unknown_exposure','NEEDS_INPUT'),('d2','ADAPTER_NOT_CONNECTED'),
+    ('unknown_exposure','NEEDS_INPUT'),('other_design','ADAPTER_NOT_CONNECTED'),
     ('extra_restriction','ADAPTER_NOT_CONNECTED'),
     ('unequal_exposure_direct','READING_RECHECK_REQUIRED'),('wrong_target_kind','READING_RECHECK_REQUIRED'),
     ('missing_a4_cell','NEEDS_INPUT'),('stale_context','CHECK_BLOCKED'),('unknown_source','CHECK_BLOCKED'),
@@ -101,7 +101,7 @@ def test_missing_misread_or_outside_scope_readings_block_without_repair(monkeypa
             'rejected_science':'NOT_ADOPTED','conflicting_science':'CONFLICTING'}[mutation]
         if mutation=='unknown_science':c['scientific_statements']['consistency']['source_ids']=[]
     elif mutation=='unknown_exposure':c['exposure']['kind']='UNKNOWN'
-    elif mutation=='d2':c['assignment'].update(kind='UNIFORM_FIXED_QUOTA',probabilities=None,fixed_count=2)
+    elif mutation=='other_design':c['assignment'].update(kind='OTHER',probabilities=None,fixed_count=None)
     elif mutation=='extra_restriction':c['additional_restrictions']=[dict(text='另要求改变合作关系后比较。',source_ids=t['source_ids'])]
     elif mutation=='unequal_exposure_direct':t['second']['exposure']=0
     elif mutation=='wrong_target_kind':t['kind']='SPILLOVER_EFFECT'

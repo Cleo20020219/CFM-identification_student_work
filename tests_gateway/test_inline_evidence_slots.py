@@ -32,6 +32,54 @@ def absent():
     return b,raw  # Deliberately wrong absence citation: must await independent review.
 
 
+def test_known_assignment_family_and_cited_gap_survive_without_becoming_a_law():
+    from cfm_id_llm.schemas import SourceDocument
+    from cfm_id_llm.evidence_refs import build_catalog
+    from cfm_id_llm.quality import MultiQueryDraftV010
+    b,raw=fixture();raw=wire(raw)
+    previous_catalog=build_catalog(b)
+    text='试点从全部门店均匀抽取固定名额，但本材料尚未提供具体名额。'
+    b=b.model_copy(update={'sources':[*b.sources,SourceDocument(source_id='assignment',text=text)]})
+    refs={a['ref']:z['ref'] for a,z in zip(previous_catalog,build_catalog(b))}
+    def rebind_fixture(x):
+        if isinstance(x,dict):return {k:([refs[r] for r in v] if k=='refs' else rebind_fixture(v)) for k,v in x.items()}
+        if isinstance(x,list):return [rebind_fixture(v) for v in x]
+        return x
+    raw=rebind_fixture(raw)
+    raw['common']['assignment_family']='COMPLETE_RANDOMIZATION'
+    raw['common']['assignment_law']=dict(state='MISSING',reason=text,
+        refs=[r['ref'] for r in build_catalog(b) if r['source_id']=='assignment'])
+    s=receive(b,raw);before=deepcopy(s.candidate);r=intake.inspect(s)
+    assert r['state']=='SEMANTIC_REVIEW_REQUIRED' and not r['core_called']
+    draft=r['report']['draft'];info=draft['shared_draft']['information_design']
+    assert info['assignment_family']=='COMPLETE_RANDOMIZATION'
+    assert info['assignment_law']==dict(value=None,basis='UNRESOLVED',evidence=[])
+    assert info['assignment_law_gap']==dict(value=text,basis='EXPLICIT_TEXT',
+        evidence=[dict(source_id='assignment',quote=text)])
+    assert MultiQueryDraftV010.model_validate(draft).model_dump(mode='json')==draft
+    w=sheet(s);assert w['fields']['common.assignment_law']['state']=='MISSING'
+    rr=record(w);rr['decisions']['common.assignment_law']['source_coverage']='REJECTED'
+    assert submit(s,rr)['state']=='CHECK_BLOCKED'
+    assert s.candidate==before
+
+
+def test_assignment_gap_cannot_replace_evidence_or_coexist_with_a_known_law():
+    from pydantic import ValidationError
+    from cfm_id_llm.schemas import InformationDesignDraft,SemanticClaim
+    old=InformationDesignDraft().model_dump(mode='json')
+    assert 'assignment_law_gap' not in old
+    assert InformationDesignDraft.model_validate(old).model_dump(mode='json')==old
+    known=dict(value='均匀抽取两家',basis='EXPLICIT_TEXT',evidence=[dict(source_id='a',quote='均匀抽取两家')])
+    gap=dict(value='尚未提供名额',basis='EXPLICIT_TEXT',evidence=[dict(source_id='a',quote='尚未提供名额')])
+    for fields in ({}, {'assignment_law_gap':SemanticClaim()},
+                   {'assignment_law_gap':dict(gap,basis='INTERPRETATION')},
+                   {'assignment_law':known,'assignment_law_gap':gap}):
+        with pytest.raises(ValidationError):
+            InformationDesignDraft(assignment_family='COMPLETE_RANDOMIZATION',**fields)
+    assert 'assignment_law_gap' not in InformationDesignDraft(
+        assignment_family='COMPLETE_RANDOMIZATION',assignment_law=known).model_dump(mode='json')
+
+
 def test_schema_has_one_absence_location_and_same_public_sources():
     b,_=fixture();a=make_compact_request(b,a0_response_contract='evidence-slots-1')
     z=make_compact_request(b,a0_response_contract=CONTRACT)

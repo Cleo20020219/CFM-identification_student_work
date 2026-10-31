@@ -2,9 +2,9 @@
 
 本入口连接已有 R1a 组合能力，不增加数学定理，不修改求解器或验证器。用户提交业务原问题；A0 与独立业务审核确认目标后，共同分派选择局部效应事实读取协议。用户不需要选择 R1a 或内部研究会话。
 
-本轮实际正负例、失败和重读结果见接入验收记录（历史实验记录不随发布分发）。框架通过与模型首答准确率分别报告。
+本轮实际正负例、失败和重读结果见接入验收记录（历史记录不随发布）。框架通过与模型首答准确率分别报告。
 
-2026-10-30：可选读取格式保留 COUNT，并在原有可积数值均值 POINT 合同下调用 R1a；不增加密度、Poisson 或计数 PARTIAL 假设。[数学依据与适用边界](COUNT_LOCAL_MEAN_CONTRACT_ZH.md)、实际读取与重放验收（历史实验记录不随发布分发）另列。
+2026-10-30：可选读取格式保留 COUNT，并在原有可积数值均值 POINT 合同下调用 R1a；不增加密度、Poisson 或计数 PARTIAL 假设。[数学依据与适用边界](COUNT_LOCAL_MEAN_CONTRACT_ZH.md)、实际读取与重放验收（历史记录不随发布）另列。
 
 ## 业务问题及精确含义
 
@@ -56,7 +56,7 @@
 
 直接效应的两个方向均已接入。原生具名 `DIRECT` 合同仍严格表示 1 减 0；0 减 1 在业务适配器中编译为系数分别为 \(+1/|S|\)、\(-1/|S|\) 的 `ArmLinearTerm`，调用已有 `identify_verified_linear_target` 和 `replay_verified_composition`。不改数学 Core，不交换业务两端，也不把旧公式加负号冒充新证书。来源、全部非零项支持、目标系数和独立审核仍逐项检查。
 
-反向直接效应返回 `network-local-effect-linear-evidence-1` 展示容器，`results[0]` 是实际原生单个线性组合证书摘要；它不是原生具名效应 bundle。`native_evidence` 保留实际 `VerifiedCompositionV18` 内容。正向直接效应和同伴效应的旧输出保持兼容。验收见反向目标与框架核查（历史实验记录不随发布分发）。
+反向直接效应返回 `network-local-effect-linear-evidence-1` 展示容器，`results[0]` 是实际原生单个线性组合证书摘要；它不是原生具名效应 bundle。`native_evidence` 保留实际 `VerifiedCompositionV18` 内容。正向直接效应和同伴效应的旧输出保持兼容。验收见反向目标与框架核查（历史记录不随发布）。
 
 具体定义与既有证明链见 [R1a 组合合同](R1A_VERIFIED_TARGET_COMPOSITION_ZH.md)、`pfn_pipeline/identification_composition.py` 和 `pfn_pipeline/_internal/identification/randomized_network_arm.py`。这属于已有独立证书重放，不是新增形式证明助手级认证。
 
@@ -65,11 +65,11 @@
 | 层次 | 当前范围／要求 |
 |---|---|
 | 网络 | 完整、处理前固定、简单无向网络；二元处理 |
-| 分配 | D1：已知逐对象独立 Bernoulli 概率；边际比例不能代替完整分配律 |
-| 暴露 | E1：严格多数为高，平票和孤立点为低；分组定义本身不授予充分性假设 |
+| 分配 | D1–D6：独立抽签、总名额、两组名额、簇抽签、多组名额、两阶段名额混合；保留完整联合规律，边际比例不能代替 |
+| 暴露 | E1–E5：严格多数、三档比例、固定核心同伴、多值人数、是否有人使用；定义本身不授予充分性假设 |
 | 目标 | 原设计条件平均下的直接或同伴效应；固定评价名单，单对象或等权均值 |
 | A4 | 一份已声明来源覆盖所需的全部对象与两端格子；支持 `NODE_ARM_MEANS`、`NODE_FULL_LAW`、`FULL_JOINT_LAW` |
-| A5／基础条件 | 已知分配律、完整处理向量随机化、一致性、处理前固定网络、有限条件一阶矩，逐项独立审核 |
+| A5／基础条件 | 已知分配律、完整处理向量随机化、一致性、处理前固定网络、有限条件一阶矩，逐项独立审核；D6 额外审核第一阶段方案没有超出最终名单的直接结果影响 |
 | 数学检查 | 实际正支持、原生目标及来源绑定、R1a 组合证书、独立重放 |
 | 审核权限 | 当前仍仅 `SYNTHETIC_TEST` 研究合同；不发放生产或 Estimation 准入 |
 
@@ -79,7 +79,7 @@ A4 来源审核还必须确认信息对应同一原试点分配律、结果定�
 
 不会从批处理求出的格子倒推材料“已经提供”这些总体均值。若需要把多个互补来源联合起来，当前报告适配缺口；没有覆盖的格子保持缺失。零支持保持原生不适用结果，不自动补界限或触发 LLM 候选研究。
 
-当前未连接：其他 D/E 组合、非等权总体、两端自身与暴露同时改变的局部总效应、多来源联合及额外科学约束。部分能力已有原生接口；本入口的限制不代表数学上不可识别。
+当前未连接：D1–D6/E1–E5 之外的设置、非等权总体、两端自身与暴露同时改变的局部总效应、多来源联合及额外科学约束。部分能力已有原生接口；本入口的限制不代表数学上不可识别。已接设计/暴露的参数、边界与测试见[统一接入说明](NETWORK_DESIGN_EXPOSURE_ENTRY_ZH.md)。
 
 ## 文件与协议边界
 
@@ -97,8 +97,8 @@ A4 来源审核还必须确认信息对应同一原试点分配律、结果定�
 
 ```powershell
 python -m pytest tests_gateway/test_network_effect_dispatch.py tests_gateway/test_capability_registry.py tests_gateway/test_effect_source_coverage.py tests_gateway/test_effect_citation_order.py tests_gateway/test_effect_a4_scope.py -q
-python -m examples.network_effect_dispatch_reference --allow-synthetic-reviews --output ./LOCAL_EVIDENCE_NOT_DISTRIBUTED
-python -m evaluation.framework_acceptance --output ./LOCAL_EVIDENCE_NOT_DISTRIBUTED
+python -m examples.network_effect_dispatch_reference --allow-synthetic-reviews --output ./local_results/network_effect_reference
+python -m evaluation.framework_acceptance --output ./local_results/framework_effect
 ```
 
 两个输出目录必须是新目录。示例是人工标准答案和显式合成审核，API 调用为零，不能作为 LLM 准确率。实际模型测试必须保留首答、模型误读、独立审核和每次重读；真实科学假设的成立不能由上述测试证明。

@@ -12,7 +12,7 @@
 
 ## 仓库与起点
 
-这是独立的 [CFM-identification](https://github.com/zzyyLOGIC/CFM-identification) 仓库。clone 后直接在仓库根目录安装、运行和开发，无需进入 `research/identification/causal_idfm/` 子目录。负责人仍在原团队工作区维护，再将经过核对的代码同步到这里；详见[仓库布局与同步规则](docs/REPOSITORY_LAYOUT_ZH.md)。旧 ProjectCode 和原交接包不是开发起点。证书内部摘要保留，用于检查材料和审核的一致性。
+这是独立的 [CFM-identification](https://github.com/zzyyLOGIC/CFM-identification) 仓库。clone 后直接在仓库根目录安装、运行和开发，无需进入全流程仓库的子目录。负责人仍在原团队工作源码中开发，验收后同步到这里；详见[仓库布局与同步规则](docs/REPOSITORY_LAYOUT_ZH.md)。证书内部摘要保留，用于检查材料和审核的一致性。
 
 新应用统一使用 [`cfm_id.project`](cfm_id/project.py)，读取唯一推荐配置 [`cfm_id/configuration/reading.json`](cfm_id/configuration/reading.json)。这是从已有合同中选定的教学起点，没有修改 Prompt，也不声称它的准确率最优。旧默认值和旧协议只为兼容保留，见[配置指南](docs/BUSINESS_READING_CONFIG_ZH.md)。
 
@@ -50,7 +50,7 @@ request = prepare_request(session)  # 只准备请求；不调用模型、不自
 
 ## 开发阅读顺序
 
-分类的综述/定理依据与项目自定义边界见[分类与文献依据](literature_support/CLASSIFICATION_ZH.md)。开发文档只说明当前能力与扩展接口，不包含内部人员分工。
+分类的综述/定理依据与项目自定义边界见[分类与文献依据](literature_support/CLASSIFICATION_ZH.md)。开发文档说明当前能力与扩展接口，不包含内部人员分工。
 
 1. [目录与代码地图](docs/DEVELOPMENT_ENTRY_ZH.md)：每个文件夹的职责，哪些文件属于数学 Core。
 2. [读取配置](docs/BUSINESS_READING_CONFIG_ZH.md)：推荐起点、兼容默认和实验的边界。
@@ -59,6 +59,8 @@ request = prepare_request(session)  # 只准备请求；不调用模型、不自
 5. [本次交接验收](docs/DELIVERY_READINESS_ZH.md)、[未解决项](docs/KNOWN_LIMITATIONS_ZH.md)。
 
 五类当前短引用读取家族已共用[读取组件登记](docs/FACT_READING_REGISTRY_ZH.md)：固定政策均值、两政策差值、局部效应、R3 观察性政策、变量 DAG。它们仍各自保持目标与科学审核，登记不是数学求解器，也不会自动批准条件。
+
+已有计划可通过 `project.diagnose_methods` 查看[方法条件诊断](docs/METHOD_DIAGNOSTICS_ZH.md)。覆盖固定政策均值、两政策有向差值、局部直接效应与同伴效应、R3观察性固定背景完整政策均值，分开显示审核、数学检查与原执行证据；不改变执行规则、不自动补假设。固定政策示例：`python -m examples.method_diagnostics --allow-synthetic-reviews --output outputs/method_examples`；差值示例：`python -m examples.contrast_method_diagnostics --allow-synthetic-reviews --output outputs/contrast_method_examples`；局部效应示例：`python -m examples.effect_method_diagnostics --allow-synthetic-reviews --output outputs/effect_method_examples`。差值保留比较方向、共同评价范围及联合求界；局部效应保留自身/同伴两端状态、固定评价名单及原设计条件平均，局部状态成功不能替代完整效应证据。 R3示例：`python -m examples.observational_method_diagnostics --allow-synthetic-reviews --output outputs/observational_method_examples`；固定背景、交换性审核和完整政策正支持分别显示。
 
 ## 修改后的检查
 
@@ -74,4 +76,4 @@ python scripts/check_offline.py
 
 ## 历史内容
 
-当前操作指南在 `docs/`。内部任务安排、分轮实验日志和旧发布记录不随本仓库分发。`examples/legacy/` 中保留必要的冻结兼容夹具，其中两份模型回答只用于离线回放。大批在线输入输出仍保存在源码外，不随此包交付。`predevelopment/`、`research_partial/` 是保留旧导入的原型，正式 PARTIAL 位置见代码地图。协议内部标识不随文件整理更名，以保持请求、审核和证书兼容。
+当前操作指南在 `docs/`。内部任务安排、分轮实验日志和本地结果不随本仓库分发。`examples/legacy/` 中保留必要的冻结兼容夹具，其中两份合成业务模型回答只用于离线回放。大批在线输入输出仍保存在源码外，不随此包交付。`predevelopment/`、`research_partial/` 是保留旧导入的原型，正式 PARTIAL 位置见代码地图。协议内部标识不随文件整理更名，以保持请求、审核和证书兼容。

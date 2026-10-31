@@ -1,12 +1,12 @@
 # 学生开发入口与代码地图
 
-分类来源及自定义编号的边界见[文献依据](../literature_support/CLASSIFICATION_ZH.md)，开发要求见[扩展规则](EXTENSION_MAINTENANCE_ZH.md)。
+公共接口及新增能力验收见[扩展维护规则](EXTENSION_MAINTENANCE_ZH.md)；分类来源及自定义编号的边界见[文献依据](../literature_support/CLASSIFICATION_ZH.md)。
 
 ## 开发位置
 
-学生 clone 独立的 `CFM-identification` 仓库后，直接在仓库根目录开发和运行；不再进入全流程仓库的多层子目录。负责人日常维护位置保持原团队工作区，本仓库是用于 Git 发布及学生协作的副本，见[布局与同步规则](REPOSITORY_LAYOUT_ZH.md)。
+clone独立的`CFM-identification`仓库后，直接在仓库根目录开发和运行。负责人继续在原团队工作源码中开发；本仓库是发布与协作副本，见[布局与同步规则](REPOSITORY_LAYOUT_ZH.md)。
 
-旧 ProjectCode、旧交接包和展示网页不是开发起点；本地 API 实验与安装环境不随源码分发。历史验收中出现的团队路径用于追溯当时运行位置，不是学生当前操作路径。
+旧ProjectCode、历史交接包和展示网页不是当前开发起点。本地API实验、安装环境、任务安排和原始运行结果不随仓库分发。
 
 ## 三层流程，各自负责什么
 
@@ -32,7 +32,7 @@
 | `tests_gateway/` | 读取、来源、审核、分派、恢复、兼容与完整链路检查 | 按职责登记测试，不按每轮修改复制一套 |
 | `assets/` | 固定材料、Mock、回归和历史展示资源 | 不是新算法的存放处，不接收密钥和新在线结果 |
 | `literature_support/` | 文献卡、项目数学合同与实现的导航索引 | 文献支撑、项目推导、运行覆盖和测试结果是四件事；不建第二份能力登记 |
-| `docs/` | 当前合同、操作与扩展规则 | 历史实验记录不随发布分发；当前验收看 `DELIVERY_READINESS_ZH.md` |
+| `docs/` | 当前合同、操作与扩展规则 | 历史实验进入 `history/`；当前验收看 `DELIVERY_READINESS_ZH.md` |
 | `skills/` | 项目读取工作流的可选说明 | 不自动附加、不替代 Schema 和审核，未证明必然提高准确率 |
 | `scripts/` | 测试、构建、检查的薄入口 | 不放业务判定或定理 |
 | `identification_only/` | 旧原生报告表达合同 | 兼容保留，不是所有识别能力的公共入口 |
@@ -48,7 +48,9 @@
 | `project`、`configuration/reading.json` | 唯一推荐起点与配置 |
 | `business_intake`、`business_field_review`、`business_dispatch`、`business_case` | 业务读取生命周期、审核、逐问及整题执行 |
 | `capability_registry` | 当前数学能力与可调用入口的唯一运行登记 |
+| `method_requirements`、`method_diagnostics`及`contrast_diagnostics`/`effect_diagnostics`/`observational_diagnostics` | 从原生工作表、审核、执行记录生成[方法诊断](METHOD_DIAGNOSTICS_ZH.md)；已接政策均值、有向差值、局部直接/同伴效应、R3观察性固定背景政策，专用模块只适配证据形状，不新增数学能力或审核许可 |
 | `network_*_dispatch`、`dag_method_dispatch` | 业务适配器；将审核后的事实交给已有数学合同，不能把这些文件当 solver |
+| `network_design_adapter` | 已审 D1–D6/E1–E5 参数到现有原生构造器的共同转换；不推断设计、不计算支持、不自动批准条件 |
 | `bounded_policy_contract/solver/verify`、`bounded_contrast_contract/solver/verify`、`mean_order_contract/solver/verify` | 正式有限数学模型与独立验证，属于 Core |
 | `dag_backdoor_contract/solver/verify`、`dag_adjustment_contract/solver/verify`、`dag_frontdoor_contract/solver/verify` | DAG 数学合同与独立验证，属于 Core |
 | `workflows/` | 专门研究流程与既有证书的组合；`legacy_network/` 保持旧运行接口 |
@@ -64,3 +66,5 @@
 **新业务题**改 `evaluation` / `examples`；**读取字段**改 `cfm_id_llm` 及审核合同；**已有能力接入**改业务适配器和两个登记；**新定理**先补文献、数学合同、独立验证，再接业务。不要复制整条流程。
 
 完整要求见[扩展维护规则](EXTENSION_MAINTENANCE_ZH.md)、[读取配套](FACT_READING_REGISTRY_ZH.md)、[数学与证据](MATH_AND_EVIDENCE_ZH.md)。已知未完成项单独记录在[限制清单](KNOWN_LIMITATIONS_ZH.md)，不隐藏在目录说明中。
+
+随机化设计/暴露的接入样板见[设计与暴露入口](NETWORK_DESIGN_EXPOSURE_ENTRY_ZH.md)：字段规则统一在 `cfm_id_llm/network_design_reading.py`，独立科学声明仍进入各目标适配器的审核。已有 D/E 的四类目标无需学生再复制一套读取、审核和求解流程。

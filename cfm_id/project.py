@@ -21,6 +21,12 @@ def start(case):
     return business_intake.start_configured(case, reading_config())
 
 
+def diagnose_methods(intake, query_id, **options):
+    """Read-only method view through the usual reading/source/model gates."""
+    from .method_diagnostics import inspect
+    return inspect(intake, query_id, **options)
+
+
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     commands=p.add_subparsers(dest='command',required=True)

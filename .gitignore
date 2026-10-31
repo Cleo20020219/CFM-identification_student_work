@@ -31,3 +31,6 @@ local_*/
 /docs/student_tasks/
 /docs/CLASSIFICATION_TASKS_ACCEPTANCE_ZH.md
 /docs/history/
+
+# Local acceptance machine reports are not public artifacts
+/docs/HANDOFF_ACCEPTANCE.json

@@ -8,7 +8,8 @@ from fractions import Fraction
 import json
 from typing import Literal
 from pydantic import Field, StrictInt
-from .network_policy_reading import Record, Cited, Declaration, Study, Assignment, Exposure, Note, documents
+from .network_policy_reading import Record, Cited, Declaration, Study, Assignment, Exposure, FirstStageExclusion, Note, documents
+from . import network_design_reading as components
 from .network_statement_reading import DesignFacts, SelectedScienceStatements
 from .source_reference_wire import catalog, expand
 from . import effect_information_rules as information_rules
@@ -38,12 +39,13 @@ RESIDUAL_ROLES = {
 # Public field responsibilities, independent of case text and mathematical route.
 CITATION_GROUPS = {
     'Study': {'source_ids': ['nodes','edges','graph_kind','edge_list_complete','treatment','outcome','outcome_kind','context']},
-    'Assignment': {'source_ids': ['kind','probabilities','fixed_count']},
+    'Assignment': {'source_ids': ['kind',*components.ASSIGNMENT_FIELDS]},
     'EffectTarget': {'source_ids': ['kind','operation','population','aggregation'],
                      'remaining_source_ids': ['remaining_assignment']},
     'LocalArm': {'source_ids': ['own','exposure']},
     'Declaration': {'source_ids': ['value']},
-    'Exposure': {'source_ids': ['kind']},
+    'Exposure': {'source_ids': ['kind','core_collaborators']},
+    'FirstStageExclusion': {'source_ids': ['status']},
     'SelectedStatement': {'source_ids': ['status']},
     'EffectInformation': {'source_ids': ['operator','availability','outcome_nodes','arm_cells']},
     'Note': {'source_ids': ['text']},
@@ -97,6 +99,7 @@ class NetworkEffectReading(Record):
     reference_context: str = Field(pattern=r'^c[0-9a-f]{12}$')
     study: Study
     assignment: Assignment
+    first_stage_exclusion: FirstStageExclusion | None = None
     target: EffectTarget
     exposure: Exposure
     design_facts: DesignFacts
@@ -109,17 +112,16 @@ class NetworkEffectReading(Record):
 SYSTEM = '''你是网络干扰业务的事实读取助手。只按原文读取，不选择识别定理、不判断POINT、不授予科学许可。返回符合Schema的JSON。
 先记录用户要比较什么，再记录比较所需条件是否给齐。不要因为条件缺失而改写明确的业务目标。source_ids只使用本次source_catalog的s编号，reference_context照抄；此前助手提示不是事实来源。
 study保留完整对象名单、明确列出的无向边、处理和结果名称及其编码、期间与背景。没有明确完整边表时edge_list_complete=null，不自行补边。处理编码不附加到结果定义中。study.source_ids支持本记录实际写出的全部事实；如果context写入共同期间、共同背景或共同结果口径，需要把声明这些事实的原文也列入，不能仅引用介绍业务或列出网络的段落。
-assignment只读原试点的完整分配规则。各对象独立抽签且每个概率明确时用INDEPENDENT_BERNOULLI；仅给边际概率而未声明独立不能这样填。概率按对象保留为有理数字符串，不从中签人数估计。固定人数均匀抽取记UNIFORM_FIXED_QUOTA，其他方式记OTHER，缺说明记UNKNOWN。
 target.first、second分别记录被减数、减数的自身处理own和同伴暴露exposure；开启为1、未开启为0。DIRECT_EFFECT比较同一暴露下自身开启与未开启，SPILLOVER_EFFECT比较自身状态相同时两种同伴暴露；不按句子出现顺序决定方向，不把未说明坐标补成0。first减second时operation=FIRST_MINUS_SECOND。
 population是事先固定的评价名单，不是本轮实际中签者或实际未中签者的名单。明确全体时展开完整名册，明确子集或单个对象时只列对应编号，未说明为null。aggregation分别保留SINGLE、EQUAL_MEAN或未知；population_fixed_before_assignment按原文独立填写，不能由名单存在推定。
 remaining_assignment只有原文明确在满足本人与同伴条件的完整安排中，按原试点抽签概率平均时才为ORIGINAL_DESIGN_CONDITIONAL，并用remaining_source_ids引用目标中的这项约定。试点曾经随机抽签，不代表用户已经选择这项目标；未说明为UNKNOWN，固定其他人、全员推广或另一个随机规则用OTHER，保留原意。它不是暴露充分性假设。
 target.source_ids共同支持kind、operation、population、aggregation：既包括比较目的与减法方向，也包括评价谁和怎样汇总。指定名单及平均方式可能在另一段材料中，必须在这里引用；population_fixed_before_assignment子记录中的引用不代替它。first和second各自引用用户要求该端自身状态、同伴状态的原文；只介绍工具、处理编码或分组定义的材料不足以说明用户选择了哪一端，必要时同时引用比较问题和编码/分组定义。shared_outcome_and_context独立记录两端是否明确使用同一结果定义、期间及研究背景；未说明为null，明确不同为false。
-exposure只读分组定义：严格超过一半邻居开启为1、平票及孤立点为0，对应STRICT_MAJORITY_TIES_LOW；未定义为UNKNOWN，其他定义为OTHER并保留原文。定义分组不能推出潜在结果只依赖自身与暴露。
 design_facts分别记录原文是否提供完整分配规则、是否明确网络在处理前固定。scientific_statements逐项记录完整处理向量与全部潜在结果独立、一致性、有限条件一阶矩的原文状态：已采用ADOPTED、明确拟采用PROPOSED、不采用NOT_ADOPTED、未决定UNDECIDED、未提NOT_STATED、冲突CONFLICTING。NOT_STATED的source_ids为空，其余状态必须有来源；这些状态都不是审核批准。对象之间独立抽签不自动证明与潜在结果独立。
-information保留每份信息的来源及覆盖范围，读取的是“材料提供什么”，不是“当前目标需要什么”。NODE_ARM_MEANS是给定本人处理与同伴暴露的逐对象总体条件均值，要逐格列明node/own/exposure。不能从目标所需格子推定材料已经提供，也不能丢掉原文明示可用但当前目标没有用到的对象或状态。明确每个对象全部四状态可用时，应展开原文所指对象和四状态；明确只给部分对象或状态时，只列该部分，不补成全表。没有数值不等于没有格子：SYMBOLIC_POPULATION_OPERATOR仍须保留明确声明的坐标范围。
+information保留每份信息的来源及覆盖范围，读取的是“材料提供什么”，不是“当前目标需要什么”。NODE_ARM_MEANS是给定本人处理与同伴暴露的逐对象总体条件均值，要逐格列明node/own/exposure。不能从目标所需格子推定材料已经提供，也不能丢掉原文明示可用但当前目标没有用到的对象或状态。原文明示某定义下的全部状态可用时，按该暴露定义展开原文所指对象和实际状态；明确只给部分对象或状态时，只列该部分，不补成全表。没有数值不等于没有格子：SYMBOLIC_POPULATION_OPERATOR仍须保留明确声明的坐标范围。
 逐份材料完整读取后再结束回答。某项科学条件未定、背景未确认、有额外限制，均不允许提前省略其他已知事实；这些缺项或限制照常分别记录，information仍完整记录原文已经提供的范围。真正没说明的范围保持缺失，不能由这条要求猜出格子。NODE_FULL_LAW是逐对象(Y_i,完整T)的总体联合分布；FULL_JOINT_LAW是全部Y和完整T的总体联合分布，二者arm_cells应为空，但仍记录其各自的operator和outcome_nodes。有限样本记录、分组样本均值和其他样本估计，同一记录的operator与availability都填FINITE_SAMPLE，arm_cells为空，保留原文明确覆盖的outcome_nodes和来源；不能因为样本按本人/同伴状态分组就填NODE_ARM_MEANS或总体均值格子。若另有独立声明可用的总体信息，另建记录保留其类型和范围，不得因存在样本而丢掉总体信息，也不得用总体信息覆盖样本记录。只有明确声明可用的总体均值才用NODE_ARM_MEANS；未明确总体信息时不得升级。如果原文给出具体总体均值数值，而本Schema的信息字段没有数值位置，只将该数值与对应坐标保留在additional_restrictions；仍在information完整记录其可用性和范围。不能为了接入当前方法而删除具体数值或更强限制。
 最后按residual_field_contract逐项核对主张归属，不按原文段落整段复制。information已完整表达的类型、可用性、对象和状态范围，不再成为additional_restrictions；不能仅因原文说“另有信息”就追加一条限制。同段内还有真正未表达的科学限制或具体数值时，只摘出这项剩余主张及其适用范围、引用，不能连同限制一起丢掉。
 unresolved的引用由缺项是怎样得知的决定：原文明说“未提供”“未决定”时引用这段原文；材料完全没提时才保留空来源，不制造证据。保留实际未知、未提供的范围与冲突，不把符号信息没有数值当作缺项。各字段无相应主张时用规定的null/UNKNOWN/空列表，不填职责口号或自评。格式正确和引用存在不代表语义正确，仍须独立审核。'''
+SYSTEM += "\n" + components.ASSIGNMENT_GUIDANCE + "\n" + components.EXPOSURE_GUIDANCE + "\n" + components.STAGE_GUIDANCE
 
 
 def reference_catalog(bundle, *, binding):
@@ -159,6 +161,7 @@ def parse(bundle, raw, *, binding):
         raise ValueError('UNIQUE_NETWORK_NODES_REQUIRED')
     if any(len(e)!=2 or e[0]==e[1] or not set(e)<=set(nodes) for e in edges) or len({frozenset(e) for e in edges})!=len(edges):
         raise ValueError('SIMPLE_GRAPH_COORDINATES_REQUIRED')
+    components.validate_components(a, c.exposure, nodes, edges)
     if a.probabilities is not None and (not set(a.probabilities)<=set(nodes) or
             any(not 0<=Fraction(p)<=1 for p in a.probabilities.values())):
         raise ValueError('INVALID_ASSIGNMENT_PROBABILITIES')
@@ -172,6 +175,9 @@ def parse(bundle, raw, *, binding):
     for arm in (t.first,t.second):
         if arm.own is not None and arm.own not in (0,1) or arm.exposure is not None and arm.exposure<0:
             raise ValueError('INVALID_LOCAL_ARM')
+        if arm.exposure is not None:
+            for node in t.population or []:
+                components.validate_exposure_coordinate(c.exposure, node, arm.exposure, edges)
     for source in c.information:
         information_rules.require(source)
         if not set(source.outcome_nodes)<=set(nodes) or len(set(source.outcome_nodes))!=len(source.outcome_nodes):
@@ -179,4 +185,6 @@ def parse(bundle, raw, *, binding):
         cells=[(v.node,v.own,v.exposure) for v in source.arm_cells]
         if len(set(cells))!=len(cells) or any(n not in source.outcome_nodes or a not in (0,1) or e<0 for n,a,e in cells):
             raise ValueError('INVALID_A4_ARM_CELLS')
+        for cell in source.arm_cells:
+            components.validate_exposure_coordinate(c.exposure, cell.node, cell.exposure, edges)
     return dict(facts=c.model_dump(mode='json'), reference_binding=refs)

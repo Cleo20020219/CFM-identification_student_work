@@ -17,6 +17,9 @@ NetworkFactProfile = Literal[
     'network-source-selections-dependencies-1',
     'network-source-selections-alignment-1',
     'network-policy-definition-refs-1',
+    'network-policy-record-definitions-1',
+    'network-policy-scopes-1',
+    'network-policy-scopes-2',
 ] | None
 
 
@@ -49,6 +52,8 @@ def _protocols():
     from . import network_source_dependencies as dependencies
     from . import reading_alignment_contract as alignment
     from . import policy_evidence_dependencies as explicit
+    from . import policy_record_definitions as records, policy_scope_reading as scopes
+    from . import policy_assumption_dependencies as assumption_dependencies
     return MappingProxyType({
         None: NetworkFactProtocol(legacy.make_request, legacy.parse, legacy.NetworkPolicyReading, legacy.VERSION),
         statements.VERSION: NetworkFactProtocol(statements.make_request, statements.parse, statements.StatementReading, statements.VERSION),
@@ -64,6 +69,9 @@ def _protocols():
         alignment.NETWORK_CONTRACT: NetworkFactProtocol(alignment.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,request_field_constraints=alignment.field_constraints),
         dependencies.CONTRACT: NetworkFactProtocol(dependencies.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,request_field_constraints=dependencies.field_constraints),
         explicit.CONTRACT: NetworkFactProtocol(explicit.make_request, explicit.parse, explicit.Reading, explicit.CONTRACT,request_field_constraints=explicit.field_constraints),
+        scopes.CONTRACT: NetworkFactProtocol(scopes.make_request, scopes.parse, scopes.Reading, scopes.CONTRACT,request_field_constraints=scopes.field_constraints),
+        assumption_dependencies.CONTRACT: NetworkFactProtocol(assumption_dependencies.make_request, assumption_dependencies.parse, assumption_dependencies.Reading, assumption_dependencies.CONTRACT,request_field_constraints=assumption_dependencies.field_constraints),
+        records.CONTRACT: NetworkFactProtocol(records.make_request, records.parse, records.Reading, records.CONTRACT,request_field_constraints=records.field_constraints),
     })
 
 

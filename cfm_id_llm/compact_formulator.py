@@ -190,7 +190,7 @@ def make_compact_request(case: BusinessCase, *, assignment_semantics=None, targe
     return system, user, catalog
 
 
-def assemble_compact(case: BusinessCase, wire: CompactDraft, *, reference_contract=None) -> dict:
+def assemble_compact(case: BusinessCase, wire: CompactDraft, *, reference_contract=None, evidence_details=None) -> dict:
     """Only copy claimed meanings and bind exact text. No inferred coordinates."""
     from .compact_reference_contract import canonical_catalog
     registry = {s['ref']: s for s in canonical_catalog(case, reference_contract)}
@@ -218,6 +218,13 @@ def assemble_compact(case: BusinessCase, wire: CompactDraft, *, reference_contra
             'sample_data_description': claim(common.sample_data_description)},
     }
     shared['units_variables']['covariates'] = [claim(c) for c in common.covariates]
+    # MISSING was validated and projected to UNKNOWN by the evidence contract.
+    # Keep its reason separate from the law; a known design family does not
+    # imply that all design parameters were supplied. No prose classification.
+    for note in (evidence_details or {}).get('missing_information', []):
+        if note['field_path'] == 'common.assignment_law':
+            shared['information_design']['assignment_law_gap'] = claim(
+                CompactClaim(state='STATED', value=note['reason'], refs=note['refs']))
     queries = []
     for i, q in enumerate(wire.queries, 1):
         goal = claim(q.goal)
@@ -356,7 +363,8 @@ class CompactFormulator:
                 diagnostics={'stage': 'compact_schema', 'issue_count': len(errors), 'issues': [
                     {'code': e['type'], 'path': [x if type(x) is int or x in fields else '[unknown_field]' for x in e['loc']]}
                     for e in errors[:20]]}) from None
-        self.last_bound_draft = assemble_compact(case, wire, reference_contract=self.a0_reference_contract)
+        self.last_bound_draft = assemble_compact(case, wire, reference_contract=self.a0_reference_contract,
+                                               evidence_details=evidence_details)
         report = A0QualityFormulatorV010(_BoundDraftProvider(self.provider.name, self.last_bound_draft),
             prompt_version=COMPACT_PROMPT_VERSION + ('+' + self.assignment_semantics if self.assignment_semantics else '')
                 + ('+' + self.target_summary_contract if self.target_summary_contract else '')

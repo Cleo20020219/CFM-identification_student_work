@@ -41,14 +41,23 @@ shared_outcome_and_context仅记录原文是否明确两端使用相同结果定
 @lru_cache(maxsize=None)
 def reading_model(profile=None):
     protocol = network_fact_protocol(profile)
-    from . import policy_evidence_dependencies as explicit
-    target = explicit.contrast_target_model() if profile == explicit.CONTRACT else PolicyContrastTarget
+    from . import policy_evidence_dependencies as explicit, policy_record_definitions as records, policy_scope_reading as scopes
+    from . import policy_assumption_dependencies as assumptions
+    target = explicit.contrast_target_model() if profile in (explicit.CONTRACT, records.CONTRACT, scopes.CONTRACT, assumptions.CONTRACT) else PolicyContrastTarget
     # Base class is selected only from the closed source-owned protocol table.
     return create_model('NetworkPolicyContrastReading', __base__=protocol.model,
         version=(Literal[VERSION], ...), target=(target, ...))
 
 
 def make_request(bundle, *, binding, assignment_semantics=None, profile=None):
+    from . import policy_assumption_dependencies as assumptions
+    if profile == assumptions.CONTRACT:
+        return assumptions.make_contrast_request(bundle,binding=binding,assignment_semantics=assignment_semantics)
+    from . import policy_record_definitions as records, policy_scope_reading as scopes
+    if profile == scopes.CONTRACT:
+        return scopes.make_contrast_request(bundle, binding=binding, assignment_semantics=assignment_semantics)
+    if profile == records.CONTRACT:
+        return records.make_contrast_request(bundle, binding=binding, assignment_semantics=assignment_semantics)
     from . import policy_evidence_dependencies as explicit
     if profile == explicit.CONTRACT:
         return explicit.make_contrast_request(bundle, binding=binding, assignment_semantics=assignment_semantics)
@@ -85,6 +94,14 @@ def make_request(bundle, *, binding, assignment_semantics=None, profile=None):
 
 
 def parse(bundle, raw, *, binding, profile=None):
+    from . import policy_assumption_dependencies as assumptions
+    if profile == assumptions.CONTRACT:
+        return assumptions.parse_contrast(bundle,raw,binding=binding)
+    from . import policy_record_definitions as records, policy_scope_reading as scopes
+    if profile == scopes.CONTRACT:
+        return scopes.parse_contrast(bundle, raw, binding=binding)
+    if profile == records.CONTRACT:
+        return records.parse_contrast(bundle, raw, binding=binding)
     from . import policy_evidence_dependencies as explicit
     if profile == explicit.CONTRACT:
         return explicit.parse_contrast(bundle, raw, binding=binding)

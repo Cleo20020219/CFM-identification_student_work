@@ -62,7 +62,7 @@ def transform_request(request):
  body['evidence_dependency_contract']=dict(version=VERSION,definitions={
   'study':dict(path='/study/source_ids',supports=['object identity','own-treatment coding']),
   'exposure':dict(path='/exposure/source_ids',supports=['exposure coding'])},
-  required=dict(assignment=['study when probabilities nonempty'],target=['study when population nonempty'],
+  required=dict(assignment=['study when probabilities, groups or clusters contain named objects'],target=['study when population nonempty'],
    local_arm=['study when own known','exposure when exposure known'],information=['study when outcome_nodes nonempty']),
   instruction=DEPENDENCY_RULE,automatic_source_selection=False,entailment_verified=False)
  # Replace only citation ownership wording. Scientific and information rules stay.
@@ -75,7 +75,7 @@ def transform_request(request):
   'reference和evaluated各自的source_ids引用选择该角色状态的业务原文；编码来源通过显式definition_refs解析。')
  system+='\n'+DEPENDENCY_RULE+'\n'+COUNT_RULE+'\n'
  system+='新合同中source_ids负责直接事实，definition_refs负责编码与名册依赖；父定义引用不能隐式继承，必须在本记录列出依赖。'+\
-  '有概率名单的assignment、有评价名单的target及有对象名单的information须列study；own已知的两端列study，exposure已知的两端列exposure。'+\
+  '有概率名单、分组或簇名单的assignment、有评价名单的target及有对象名单的information须列study；own已知的两端列study，exposure已知的两端列exposure。'+\
   '本端source_ids引用业务所选状态；定义引用不能替代这项选择。有限记录未明确覆盖哪些对象时outcome_nodes留空，不能因study有完整名册便声称记录覆盖全体。'
  # Override superseded local citation descriptions, keeping new rule explicit.
  for name in ('LocalArm','Assignment','Target','Information'):
@@ -84,7 +84,7 @@ def transform_request(request):
   **{k:v for k,v in legacy.CITATION_GROUPS.items() if k not in ('EffectTarget','EffectInformation','LocalArm','Assignment')},
   'Target':{'source_ids':['kind','population scope','aggregation'],'definition_refs':['object identity'], 'remaining_source_ids':['remaining_assignment']},
   'Information':{'source_ids':['operator','availability','scope'],'definition_refs':['object identity']},
-  'Assignment':{'source_ids':['kind','probabilities','fixed_count'],'definition_refs':['object identity']},
+  'Assignment':{'source_ids':['kind',*legacy.components.ASSIGNMENT_FIELDS],'definition_refs':['object identity']},
   'LocalArm':{'source_ids':['selected own state','selected exposure state'],'definition_refs':['own/exposure coding']}},independent_review_required=True)
  return dict(system=system,user=json.dumps(body,ensure_ascii=False))
 
@@ -95,7 +95,7 @@ def parse(bundle,raw,*,binding,reviewed_query):
  # Reject foreign IDs even on definitions not subsequently used.
  expand(deepcopy(candidate),refs)
  resolutions=[]
- rows=[('/assignment',candidate['assignment'],{'study'} if wire.assignment.probabilities else set()),
+ rows=[('/assignment',candidate['assignment'],{'study'} if any(getattr(wire.assignment, k) for k in ('probabilities','groups','clusters')) else set()),
   ('/target',candidate['target'],{'study'} if wire.target.population else set())]
  rows += [(f'/target/{name}',candidate['target'][name],
   ({'study'} if getattr(wire.target,name).own is not None else set()) | ({'exposure'} if getattr(wire.target,name).exposure is not None else set())) for name in ('reference','evaluated')]

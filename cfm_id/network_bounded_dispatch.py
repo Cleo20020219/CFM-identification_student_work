@@ -20,7 +20,8 @@ def prepare(entry,raw,c,out):
     def stop(state,reason,question=None):
         return dict(out,state=state,reason_code=reason,
             clarification_questions=[question] if question else out['clarification_questions'])
-    if c.assignment.kind!='UNIFORM_FIXED_QUOTA' or len(c.study.nodes)>MAX_N:
+    if (c.assignment.kind!='UNIFORM_FIXED_QUOTA' or len(c.study.nodes)>MAX_N
+            or c.exposure.kind not in ('STRICT_MAJORITY_TIES_LOW','UNKNOWN','NONE','OTHER')):
         return stop('ADAPTER_NOT_CONNECTED','BOUNDED_D2_E1_FINITE_DOMAIN_REQUIRED')
     if any(s.operator not in ('NODE_SIGNATURE_MEANS','FINITE_SAMPLE','UNKNOWN') for s in c.information):
         return stop('ADAPTER_NOT_CONNECTED','FULL_INFORMATION_CANNOT_BE_DOWNGRADED_TO_MEAN_BOX')

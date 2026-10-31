@@ -23,11 +23,17 @@
 |---|---|---|
 | 唯一推荐起点 | `cfm_id/configuration/reading.json` | 新会话由 `project.start` 加载；学生不自行拼装 |
 | 历史兼容默认 | `ReadingConfig()`、[compatibility_default.json](../examples/legacy/configs/compatibility_default.json) | 旧 API、旧 CLI 默认不改，继续重建旧请求；不是学生推荐起点 |
-| 实验或历史配置 | 旧协议说明（历史实验记录不随发布分发）、`examples/legacy/configs/previous_research.json` | 只用于明确的比较或复现；必须连同当时请求、回答和审核使用 |
+| 实验或历史配置 | 旧协议说明（历史记录不随发布）、`examples/legacy/configs/previous_research.json` | 只用于明确的比较或复现；必须连同当时请求、回答和审核使用 |
 
-`network-policy-definition-refs-1`、`organized-reading-1` 等保留为实验配置，本次不提升默认。旧协议的内部标识参与绑定，不能因清理文件名而改写，也不能给旧会话自动套新配置。
+`network-policy-definition-refs-1`、`network-policy-record-definitions-1`、`organized-reading-1` 等保留为实验配置，本次不提升默认。第二项补齐科学条件覆盖名单的显式定义依赖，见[共同读取登记](FACT_READING_REGISTRY_ZH.md#可选的政策定义引用样板)；少量事实读取对照通过不代表完整 A0 链路稳定。旧协议的内部标识参与绑定，不能因清理文件名而改写，也不能给旧会话自动套新配置。
 
 ## 实际调用
+
+本地接口对照另有 `single-action-target-1`（A0 主政策单一归属）与 `network-policy-scopes-1`（信息范围和状态引用配对）。两者仍为显式实验配置，见[读取登记](FACT_READING_REGISTRY_ZH.md#主政策记录范围和状态引用的接口对照)。不得把历史回答删除重复字段后当成新协议模型成绩；需用新请求重新读取。推荐 JSON 本轮保持不变。
+
+候选 `single-action-target-2` 仅增加精确重复别名兼容，并向事实阶段交接单份已审核意图。其与材料清单的冻结验收尚未通过完整真实链路，因此不替换推荐起点。阶段职责、兼容界限及实际失败见[政策交接](POLICY_STAGE_OWNERSHIP_ZH.md)与[冻结验收](CONTRACT_CLOSURE_ACCEPTANCE_ZH.md)。
+
+后续显式候选 `network-policy-scopes-2` 将“未声明假设的定义依赖”统一到 Schema、解析、来源审核和诊断。固定政策均值及两政策差值共同使用；旧协议和推荐配置不变。[共同规则与验收](ASSUMPTION_DEPENDENCY_CONTRACT_ZH.md)记录了改善及限制，本次事实阶段复测不替代完整 A0 验收。
 
 ```python
 from cfm_id import project
@@ -46,6 +52,8 @@ python -m cfm_id.project start --input case.json --output outputs/new_case
 `ReadingConfig` 验证配置组合，拒绝未知字段、非法值和不兼容格式。配置不包含 API Key、数学路线、预期结论或科学批准。修改配置只能创建新会话；不能搬用旧批准。
 
 ## 如何维护
+
+可单独选择 `material_handoff="information-inventory-1"`，为固定政策均值／两政策差值接入来源绑定的材料清单。它是交接与审核选项，不是新的 Prompt 版本或数学路线。需要 compact A0、short_refs 事实格式及独立 A0 字段审核；随后必须完成新的材料审核工作表。其他读取族当前不支持此选项。默认不启用，推荐配置未改动，历史会话序列化不增加该空字段。已有会话可用 `configure_material_handoff` 显式启用，会保留原答并使旧审核失效；不能借此恢复因历史 Prompt 已变化而失效的检查点。详见 [来源审核](FACT_SOURCE_REVIEW_ZH.md)。
 
 只有一处推荐 JSON，读取函数负责加载与验证，文档不维护第二个配置对象。需要变更起点时，同步验收首次请求、事实读取配对、来源审核、重读、整题执行和源码外安装；原协议继续保留旧请求兼容。真实读取效果另做冻结评测。
 

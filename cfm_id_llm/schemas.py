@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator, model_serializer
 
 
 class StrictModel(BaseModel):
@@ -142,13 +142,20 @@ class PopulationInformationLevel(str, Enum):
 class InformationDesignDraft(StrictModel):
     assignment_family: AssignmentFamily = AssignmentFamily.UNRESOLVED
     assignment_law: SemanticClaim = Field(default_factory=SemanticClaim)
+    assignment_law_gap: SemanticClaim | None = Field(default=None, description=(
+        'Source-backed statement that the assignment law is incomplete or unavailable. '
+        'This is a gap description, never a known law, parameter value or scientific permission.'))
     population_information_level: PopulationInformationLevel = PopulationInformationLevel.UNRESOLVED
     population_observable_operator: SemanticClaim = Field(default_factory=SemanticClaim)
     sample_data_description: SemanticClaim = Field(default_factory=SemanticClaim)
 
     @model_validator(mode="after")
     def typed_fields_need_evidence(self):
-        if self.assignment_family != AssignmentFamily.UNRESOLVED and self.assignment_law.basis == "UNRESOLVED":
+        if self.assignment_law_gap is not None:
+            if self.assignment_law_gap.basis != "EXPLICIT_TEXT" or self.assignment_law.basis != "UNRESOLVED":
+                raise ValueError("Assignment-law gap requires explicit evidence and an unresolved law")
+        if (self.assignment_family != AssignmentFamily.UNRESOLVED
+                and self.assignment_law.basis == "UNRESOLVED" and self.assignment_law_gap is None):
             raise ValueError("Concrete assignment_family requires evidenced assignment_law")
         operator_levels = {
             PopulationInformationLevel.FULL_JOINT_LAW,
@@ -160,6 +167,13 @@ class InformationDesignDraft(StrictModel):
         if self.population_information_level in operator_levels and self.population_observable_operator.basis == "UNRESOLVED":
             raise ValueError("Declared population-law level requires an evidenced operator")
         return self
+
+    @model_serializer(mode="wrap")
+    def preserve_existing_records(self, handler):
+        value = handler(self)
+        if self.assignment_law_gap is None:
+            value.pop('assignment_law_gap', None)
+        return value
 
 
 class AssumptionProposal(StrictModel):

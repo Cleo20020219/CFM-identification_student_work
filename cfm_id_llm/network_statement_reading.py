@@ -67,6 +67,7 @@ class StatementReading(legacy.Record):
     reference_context: str = Field(pattern=r'^c[0-9a-f]{12}$')
     study: legacy.Study
     assignment: legacy.Assignment
+    first_stage_exclusion: legacy.FirstStageExclusion | None = None
     target: legacy.Target
     design_facts: DesignFacts
     scientific_statements: ScienceStatements

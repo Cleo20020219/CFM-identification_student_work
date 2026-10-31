@@ -55,13 +55,14 @@ def contrast_target_model():
     return DefinedPolicyContrastTarget
 
 
-def _request(request, model):
+def _request(request, model, *, contract=CONTRACT, extra_required=None, schema_aliases=None):
     body = json.loads(request['user']); old = body['output_schema']
     schema = model.model_json_schema()
     names = dict(PolicyAssignment='Assignment', PolicyTarget='Target', PolicyInformation='Information',
                  DefinedPolicyEndpoint='PolicyEndpoint', DefinedPolicyContrastTarget='PolicyContrastTarget')
+    names.update(schema_aliases or {})
     for name, node in schema['$defs'].items():
-        prior = old['$defs'].get(names.get(name, name), {})
+        prior = old['$defs'].get(name, old['$defs'].get(names.get(name, name), {}))
         for key, prop in node.get('properties', {}).items():
             if key != 'definition_refs' and 'description' in prior.get('properties', {}).get(key, {}):
                 prop['description'] = prior['properties'][key]['description']
@@ -81,12 +82,13 @@ def _request(request, model):
     body['output_schema'] = schema
     body.pop('source_dependency_contract', None)
     body['reading_alignment_contract']['field_constraints'] = alignment._status_rules(schema)
-    body['evidence_dependency_contract'] = dict(version=CONTRACT,
+    body['evidence_dependency_contract'] = dict(version=contract,
         definitions={'study': dict(path='/study/source_ids', supports=['object identity and order', 'own-treatment coding'])},
-        required=dict(assignment='study when probabilities contain named objects',
+        required=dict(assignment='study when probabilities, groups or clusters contain named objects',
                       policy_target='study when assignment or population is nonempty',
                       information='study when outcome_nodes, assignment_cells or signature_cells are nonempty'),
         instruction=RULE, automatic_source_selection=False, entailment_verified=False)
+    body['evidence_dependency_contract']['required'].update(extra_required or {})
     # Replace only the superseded flat-citation ownership wording. All scientific
     # and target instructions are inherited, including the exact SCIENCE rule.
     system = request['system'].replace('\n' + flat.INSTRUCTION, '')
@@ -106,18 +108,22 @@ def make_contrast_request(bundle, *, binding, assignment_semantics=None):
         contrast.reading_model(CONTRACT))
 
 
-def _resolve(bundle, raw, *, binding, model, contrast=False):
+def _resolve(bundle, raw, *, binding, model, contrast=False, contract=CONTRACT, additional_records=()):
     candidate = model.model_validate(deepcopy(raw)).model_dump(mode='json')
     refs = legacy.reference_catalog(bundle, binding=binding)
     if candidate['reference_context'] != refs['context']:
         raise ValueError('STALE_POLICY_REFERENCE_CONTEXT')
     expand(deepcopy(candidate), refs)  # Includes unused definition source IDs.
-    rows = [('/assignment', candidate['assignment'], bool(candidate['assignment']['probabilities']))]
+    rows = [('/assignment', candidate['assignment'], any(candidate['assignment'].get(k) for k in ('probabilities','groups','clusters')))]
     for path, record in ([(f'/target/{side}', candidate['target'][side]) for side in ('first','second')]
                          if contrast else [('/target', candidate['target'])]):
         rows.append((path, record, bool(record['assignment'] or record['population'])))
     rows += [(f'/information/{i}', record, bool(record['outcome_nodes'] or record['assignment_cells'] or record['signature_cells']))
              for i, record in enumerate(candidate['information'])]
+    # Additional record owners are supplied by registered source code only.
+    # A declared definition is evidence of identity, never of scope or adoption.
+    rows += [('/'+name, candidate[name], any(candidate[name].get(k) for k in keys))
+             for name, keys in additional_records]
     resolutions = []
     for path, record, required in rows:
         uses = record.pop('definition_refs')
@@ -136,14 +142,19 @@ def _resolve(bundle, raw, *, binding, model, contrast=False):
         # mixing them would falsely turn one exact table into multiple sources.
         resolutions.append(dict(field_path=path, direct_source_ids=direct,
             definition_refs=uses, resolved_source_ids=list(dict.fromkeys(resolved))))
-    return candidate, dict(version=CONTRACT, resolutions=resolutions,
+    return candidate, dict(version=contract, resolutions=resolutions,
         source_entailment_verified=False, raw_candidate_modified=False,
         automatic_source_selection=False, scientific_approval=False,
         native_source_ids_role='DIRECT_CLAIMS_ONLY_DEFINITIONS_RETAINED_IN_RECEIPT')
 
 
 def parse(bundle, raw, *, binding):
-    candidate, receipt = _resolve(bundle, raw, binding=binding, model=Reading)
+    return parse_defined(bundle, raw, binding=binding, model=Reading)
+
+
+def parse_defined(bundle, raw, *, binding, model, contract=CONTRACT, additional_records=()):
+    candidate, receipt = _resolve(bundle, raw, binding=binding, model=model,
+        contract=contract, additional_records=additional_records)
     candidate['version'] = statements.SELECTION_VERSION
     decoded = statements.parse_selection(bundle, candidate, binding=binding)
     statement_receipt = decoded['statement_reading_receipt']
@@ -155,27 +166,31 @@ def parse(bundle, raw, *, binding):
 
 
 def parse_contrast(bundle, raw, *, binding):
+    return parse_defined_contrast(bundle, raw, binding=binding, mean_parser=parse)
+
+
+def parse_defined_contrast(bundle, raw, *, binding, mean_parser, contract=CONTRACT, additional_records=()):
     from . import network_contrast_reading as contrast
     candidate, receipt = _resolve(bundle, raw, binding=binding,
-        model=contrast.reading_model(CONTRACT), contrast=True)
+        model=contrast.reading_model(contract), contrast=True, contract=contract, additional_records=additional_records)
     decoded = contrast.parse(bundle, candidate, binding=binding, profile=alignment.NETWORK_CONTRACT)
     # The downstream mean adapter still carries the original request profile.
     # Preserve explicit dependency declarations in its two wire projections;
     # do not feed a legacy-shaped candidate to the new profile's parser.
     kinds = {'FIXED_POLICY_MEAN_DIFFERENCE': 'FIXED_POLICY_MEAN', 'OTHER': 'OTHER', 'UNKNOWN': 'UNKNOWN'}
     for side in contrast.SIDES:
-        endpoint = contrast.reading_model(CONTRACT).model_validate(deepcopy(raw)).model_dump(mode='json')
-        endpoint['version'] = CONTRACT
+        endpoint = contrast.reading_model(contract).model_validate(deepcopy(raw)).model_dump(mode='json')
+        endpoint['version'] = contract
         endpoint['target'] = dict(endpoint['target'][side], kind=kinds[endpoint['target']['kind']])
         decoded['endpoint_candidates'][side] = endpoint
-        decoded['endpoint_readings'][side] = parse(bundle, endpoint, binding=binding)
+        decoded['endpoint_readings'][side] = mean_parser(bundle, endpoint, binding=binding)
     decoded['evidence_dependencies'] = receipt
     return decoded
 
 
-def field_constraints(paths, *, request):
+def field_constraints(paths, *, request, contract=CONTRACT):
     body = json.JSONDecoder().raw_decode(request['user'])[0]
-    if body.get('evidence_dependency_contract', {}).get('version') != CONTRACT:
+    if body.get('evidence_dependency_contract', {}).get('version') != contract:
         raise ValueError('POLICY_DEFINITION_REQUEST_REQUIRED')
     schema = body['output_schema']
     rows = flat._schema_rules(schema) + alignment._status_rules(schema)

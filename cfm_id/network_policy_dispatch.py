@@ -11,6 +11,8 @@ from .business_dispatch import (sha, worksheet, checked_review, DispatchReview,
 from cfm_id_llm.network_policy_reading import NetworkPolicyReading
 from cfm_id_llm.network_fact_protocols import network_fact_protocol
 from cfm_id_bridge.scientific_binding import sha as native_sha, canonical_data
+from . import network_design_adapter as design_adapter
+from cfm_id_llm import network_design_reading as design_fields
 
 R1B = 'R1B_FULL_ASSIGNMENT'
 R2 = 'R2_MEAN_SIGNATURE'
@@ -19,6 +21,7 @@ BASE_CONDITIONS = ('known_assignment_law','full_vector_randomization','consisten
                    'fixed_pretreatment_network','finite_conditional_first_moments')
 READING_DECISIONS = ('target_policy_population_and_weights','network_assignment_and_variable_meaning',
                      'all_information_and_restrictions_preserved','source_entailment')
+R2_SCIENCE_DECISIONS = ('mean_sufficiency_all_assignments_and_weighted_nodes',)
 
 
 def target_coordinates(c):
@@ -60,7 +63,10 @@ def inspect_methods(entry, raw, *, note_review=None, information_evidence_review
         if notes['worksheet'] is not None:
             out.update(note_review_worksheet=notes['worksheet'],note_review_receipt=notes['receipt'],
                 reading_notes=deepcopy(decoded['facts']['unresolved']),reading_recheck_notes=notes['reading_recheck_notes'])
-        missing, unsupported = [], []
+        gaps, unsupported = design_adapter.component_gaps(c)
+        if 'CONFLICTING_FIRST_STAGE_EXCLUSION' in unsupported:
+            return dict(out,state='READING_RECHECK_REQUIRED',reason_code='CONFLICTING_FIRST_STAGE_EXCLUSION')
+        missing = ['请补充原文中的分配或科学条件字段：'+field for field in gaps]
         if c.additional_restrictions:
             unsupported.append('ADDITIONAL_INFORMATION_OR_RESTRICTIONS_REQUIRE_SEPARATE_ADAPTER')
         if c.study.graph_kind=='OTHER' or c.study.outcome_kind=='OTHER':
@@ -86,6 +92,10 @@ def inspect_methods(entry, raw, *, note_review=None, information_evidence_review
             missing.append('请明确评价哪些对象，以及是否对这些对象取等权平均。')
         for name in BASE_CONDITIONS:
             condition = getattr(c.assumptions,name)
+            if name == 'known_assignment_law':
+                question = design_adapter.assignment_availability_question(condition)
+                if question: missing.append(question)
+                continue
             if condition.value is None: missing.append('请研究者核对原材料中的科学条件声明：'+name+'；模型漏读不等于原文没有。')
             elif condition.value is False: unsupported.append('DECLARED_MODEL_EXCLUDES:'+name)
         if not c.study.source_ids or not c.target.source_ids or not c.assignment.source_ids:
@@ -139,7 +149,8 @@ def inspect_methods(entry, raw, *, note_review=None, information_evidence_review
             usable.append(i)
         indices = {R1B:[i for i in usable if c.information[i].operator!='NODE_SIGNATURE_MEANS']}
         sf = c.mean_sufficiency
-        r2_condition = (c.exposure.kind=='STRICT_MAJORITY_TIES_LOW' and bool(c.exposure.source_ids)
+        r2_condition = (c.exposure.kind in design_fields.EXPOSURE_GROUPS
+            and not design_fields.missing_exposure(c.exposure,c.study.nodes) and bool(c.exposure.source_ids)
             and sf.value is True and sf.scope=='ALL_BINARY_ASSIGNMENTS' and bool(sf.source_ids)
             and set(c.target.population)<=set(sf.covered_nodes))
         indices[R2] = [i for i in usable if c.information[i].operator!='ASSIGNMENT_NODE_MEANS'] if r2_condition else []
@@ -149,13 +160,13 @@ def inspect_methods(entry, raw, *, note_review=None, information_evidence_review
                           else 'POPULATION_INFORMATION_NOT_SUPPLIED_FOR_METHOD')
                 out['exclusions'].append(dict(method=method,reason_code=reason,
                     unresolved=(not usable if method==R1B else sf.value is None or
-                        (sf.value is True and (sf.scope=='UNKNOWN' or c.exposure.kind=='UNKNOWN' or
+                        (sf.value is True and (sf.scope=='UNKNOWN' or c.exposure.kind=='UNKNOWN' or design_fields.missing_exposure(c.exposure,c.study.nodes) or
                             not set(c.target.population)<=set(sf.covered_nodes))) or
                         (r2_condition and not indices[R2]))))
                 continue
             binding = sha(dict(entry=entry,raw=raw,method=method,source_indices=indices[method]))
-            science = (*BASE_CONDITIONS,*('a4_source_'+str(i) for i in indices[method]))
-            if method==R2: science += ('mean_sufficiency_all_assignments_and_weighted_nodes',)
+            science = (*BASE_CONDITIONS,*design_adapter.extra_science(c),*('a4_source_'+str(i) for i in indices[method]))
+            if method==R2: science += R2_SCIENCE_DECISIONS
             out['methods'].append(dict(method=method,source_indices=indices[method],
                 applicability='NOT_CHECKED_BEFORE_SCIENCE_REVIEW',
                 reading_worksheet=worksheet(binding,READING_DECISIONS),
@@ -193,9 +204,7 @@ def _compile(plan, row, records, authority):
         admit_mean_signature_sufficiency,declare_signature_population_source)
     c = NetworkPolicyReading.model_validate(plan['facts'])
     provenance = lambda ids: 'Reviewed original source locators: '+','.join(ids)
-    design = (dict(kind='heterogeneous_bernoulli_binary_v1',propensities=c.assignment.probabilities)
-              if c.assignment.kind=='INDEPENDENT_BERNOULLI'
-              else dict(kind='complete_randomization_binary_v1',m=c.assignment.fixed_count))
+    design = design_adapter.design_payload(c.assignment)
     # Target identity must not change merely because q, A4 or A5 changes.
     graph_identity=dict(nodes=c.study.nodes,edges=sorted(sorted(e) for e in c.study.edges),context=c.study.context)
     st = declare_network_study(network_id='network_'+sha(graph_identity),
@@ -213,7 +222,9 @@ def _compile(plan, row, records, authority):
         return Assumption(name=name,source='demo_specification' if authority=='SYNTHETIC_TEST' else 'human_confirmation',confirmed=True,status='ADMITTED',
             evidence=[provenance(ids),review.reviewer,review.evidence,'review_binding:'+review.binding_sha256])
     assumptions = tuple(condition(name,getattr(c.assumptions,name).source_ids) for name in BASE_CONDITIONS)
-    sig = declare_policy_signature(st,grouping='strict_majority_ties_low') if row['method']==R2 else None
+    if design_adapter.extra_science(c):
+        assumptions += (condition(design_fields.D6_CONDITION,c.first_stage_exclusion.source_ids),)
+    sig = declare_policy_signature(st,**design_adapter.exposure_payload(c.exposure)) if row['method']==R2 else None
     suff = (admit_mean_signature_sufficiency(st,sig,covered_nodes=tuple(c.mean_sufficiency.covered_nodes),
         assumption=condition('mean_signature_sufficiency',c.mean_sufficiency.source_ids)) if sig else None)
     sources=[]

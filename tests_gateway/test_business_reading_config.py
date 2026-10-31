@@ -124,11 +124,17 @@ def network_setup(profile, **kwargs):
         raw = to_wire(raw, entry)
         if profile != 'network-source-statements-1':
             raw = as_selection(raw)
-    if profile == 'network-policy-definition-refs-1':
+    if profile in ('network-policy-definition-refs-1', 'network-policy-record-definitions-1', 'network-policy-scopes-1', 'network-policy-scopes-2'):
         raw['version']=profile
         raw['assignment']['definition_refs']=['study'] if raw['assignment']['probabilities'] else []
         raw['target']['definition_refs']=['study']
         for info in raw['information']:info['definition_refs']=['study']
+        if profile in ('network-policy-record-definitions-1','network-policy-scopes-1','network-policy-scopes-2'):
+            raw['mean_sufficiency']['definition_refs']=['study'] if raw['mean_sufficiency']['covered_nodes'] else []
+    if profile in ('network-policy-scopes-1','network-policy-scopes-2'):
+        for info in raw['information']:
+            info.update(scope_status='DECLARED' if info['outcome_nodes'] else 'UNSPECIFIED',
+                        scope_source_ids=list(info['source_ids']) if info['outcome_nodes'] else [])
     return s, entry, dict(query_review=q, candidate=raw, request_sha256=entry['request_sha256'])
 
 

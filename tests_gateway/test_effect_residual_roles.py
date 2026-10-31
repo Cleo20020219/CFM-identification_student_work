@@ -17,7 +17,13 @@ def test_public_roles_match_the_actual_schema_without_new_output_fields():
     assert roles['unit'] == 'proposition_not_paragraph' and roles['automatic_repair'] is False
     for key, text in roles['fields'].items():
         assert key in raw and body['output_schema']['properties'][key]['description'] == text
-    assert set(raw) == set(body['output_schema']['properties'])
+    schema = body['output_schema']
+    # D6 added a nullable scientific declaration shared by all design schemas.
+    # This D1 fixture may omit it; D6 admission still requires independent review.
+    assert raw['assignment']['kind'] == 'INDEPENDENT_BERNOULLI'
+    assert set(raw) == set(schema['properties']) - {'first_stage_exclusion'}
+    assert 'first_stage_exclusion' not in schema['required']
+    assert schema['properties']['first_stage_exclusion']['default'] is None
 
 
 @pytest.mark.parametrize('name', CASES)

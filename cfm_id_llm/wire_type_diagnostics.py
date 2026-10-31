@@ -16,6 +16,28 @@ def _model(entry):
         return None
 
 
+def _definition_source_diagnostics(value):
+    """Locate the resolver's existing dependency/direct-source invariant.
+
+    Advisory only: schemas accept list shapes independently; the native reader
+    still owns acceptance. No reference is removed, inherited or manufactured.
+    """
+    rows = []
+    def walk(record, path=''):
+        if isinstance(record, dict):
+            if record.get('definition_refs') and 'source_ids' in record and not record['source_ids']:
+                rows.append(dict(field_path=path, error_code='DIRECT_CLAIM_SOURCE_REQUIRED',
+                    field_rule=dict(trigger_field='definition_refs', trigger='nonempty',
+                        required_field='source_ids', required_value='nonempty'),
+                    constraint='定义依赖不能替代直接主张来源。未声明的科学条件不得补为已采用；须核对当前记录是否实际存在需引用的定义依赖。'))
+            for key, child in record.items():
+                walk(child, path+'/'+key.replace('~','~0').replace('/','~1'))
+        elif isinstance(record, list):
+            for index, child in enumerate(record):walk(child, path+'/'+str(index))
+    walk(value)
+    return rows[:50]
+
+
 def diagnose(entry, candidate):
     """Return bounded diagnostics, without raw values or free-text validator errors."""
     model = _model(entry)
@@ -34,12 +56,21 @@ def diagnose(entry, candidate):
                 expected = error.get('ctx', {}).get('expected')
                 if type(expected) is str and len(expected) <= 4000:
                     row['allowed_literals'] = expected
+            if entry.get('network_fact_contract') == 'network-policy-scopes-1':
+                from .policy_scope_reading import validation_diagnostic
+                row.update(validation_diagnostic(error))
+            if entry.get('network_fact_contract') == 'network-policy-scopes-2':
+                from .policy_assumption_dependencies import validation_diagnostic
+                row.update(validation_diagnostic(error))
             rows.append(row)
         return rows
     except (ValueError, TypeError, ArithmeticError):
         # Advisory diagnostics must not disable the pre-existing source recheck
         # when an old custom validator raises an unwrapped arithmetic error.
         return []
+    if entry.get('reader_id') in ('NETWORK_FIXED_POLICY_FACTS', 'NETWORK_POLICY_CONTRAST_FACTS'):
+        dependency_rows = _definition_source_diagnostics(parsed.model_dump(mode='json'))
+        if dependency_rows:return dependency_rows
     if entry.get('reader_id') == 'NETWORK_RANDOMIZED_EFFECT_FACTS':
         from .effect_information_rules import diagnose as effect_diagnostics
         return effect_diagnostics(parsed.information)

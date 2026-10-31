@@ -133,7 +133,8 @@ def apply_revision(base,revision,*,contexts,signed_comparison=False):
                                        assignment_semantics=base.get('assignment_semantics'),network_fact_contract=base.get('network_fact_contract'),
                                        signed_comparison=signed_comparison,
                                        ordered_target=target.get('raw_query'),target_contract=target.get('contract'),
-                                       reviewed_target_context=base.get('reviewed_target_context'))
+                                       reviewed_target_context=base.get('reviewed_target_context'),material_inventory=base.get('material_inventory'),
+                                       reviewed_policy_request=base.get('reviewed_policy_request'))
         request['system']+='''
 本轮是对原事实读取的独立复查。复查定位与旧回答仅是待核对上下文，不是新业务事实或科学批准，不能作为source_ids。只引用本轮原文目录，并使用本轮reference_context。
 按原文重新核对全部字段，返回完整的新候选，不返回补丁。指出的重复可能判断有误：仅当同一内容已由专用字段完整表达时避免重复；真正额外的条件、限制和未知内容必须保留。不可因复查要求而默认填值、删去限制或输出识别结论。'''

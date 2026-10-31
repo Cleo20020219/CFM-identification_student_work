@@ -35,7 +35,7 @@ V(z\mid w)=\sum_i\omega_i\mathbb E[Y_i(z)\mid W=w].
 ## 连接边界与证据义务
 
 - 使用既有 `NETWORK_POLICY_CONTRAST_FACTS` 读取和已审 `TOTAL_EFFECT` 的完整两政策含义；不新增用户路线选择或修改 Prompt/Schema。
-- 单端条件检查与编译复用 `network_policy_dispatch`。当前共同入口的 R2 仍限 D1/D2、E1 及已有结果类型，不能据原生更宽范围扩张入口。
+- 单端条件检查与编译复用 `network_policy_dispatch`。当前共同入口已连接既有 D1–D6/E1–E5；仍须分别满足完整政策、共同评价范围、R2 均值充分性及正支持合同。有限联合求界保持 D2/E1 原范围，见[设计与暴露入口](NETWORK_DESIGN_EXPOSURE_ENTRY_ZH.md)。
 - 同一对端点使用相同研究、设计、结果、背景、评价权重、A4 来源、签名定义、均值充分性及基础假设。不同研究或不同科学模型的端点不可拼接。
 - R1b 和 R2 都有完整声明时可列为两条待审核方法；**所有计划内审核先通过**才能执行任何一条。R2 不是 R1b 失败后临时增加的假设。
 - `cfm_id.workflows.policy_difference` 只组合两个经重放的 R2 结果。核对外部目标、输入指纹、签名格子、符号项、系数、方向与回执摘要；它不是新 Core 定理或通用证明验证器。原 R1b 回执保持原协议。

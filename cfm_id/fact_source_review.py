@@ -42,6 +42,14 @@ def _pointer(value, path):
 
 
 def prepare(entry, candidate):
+    """Select the explicit entry contract; historical entries remain strict v1."""
+    if entry.get('material_inventory') is not None:
+        from .reading_impact_review import prepare as prepare_impact
+        return prepare_impact(entry,candidate)
+    return _prepare_fields(entry,candidate)
+
+
+def _prepare_fields(entry, candidate):
     """A local worksheet, no model call and no native method selection."""
     from .fact_reading_revision import _references, _paths
     from cfm_id_llm.fact_wire_models import model_for
@@ -86,6 +94,13 @@ def prepare(entry, candidate):
         elif type(value) is list:
             for i,v in enumerate(value):walk(v,path+'/'+str(i))
     walk(candidate)
+    # New contracts expose their schema-owned combination rules for reviewers.
+    # No metadata is added to old worksheets, preserving historical bindings.
+    schema=body.get('output_schema',{})
+    mean_ref=schema.get('properties',{}).get('mean_sufficiency',{}).get('$ref','')
+    if mean_ref.startswith('#/$defs/') and '/mean_sufficiency' in rows:
+        rules=schema.get('$defs',{}).get(mean_ref.rsplit('/',1)[-1],{}).get('x-cfm-field-contract')
+        if rules:rows['/mean_sufficiency']['combination_rules']=deepcopy(rules)
     source_catalog = deepcopy(refs['aliases'])
     identity = dict(version=VERSION,entry=entry,candidate=candidate,fields=rows,
         source_catalog=source_catalog,evidence_rule=EVIDENCE_RULE)
@@ -97,8 +112,22 @@ def prepare(entry, candidate):
         scope='Source roles, completeness and actual citation coverage only; no candidate repair or mathematical conclusion.')
 
 
+def validate_decision_evidence(decisions,source_catalog):
+    """Shared record validity only; never create or change review decisions."""
+    for decision in decisions.values():
+        if len(set(decision.source_ids)) != len(decision.source_ids) or any(k not in source_catalog for k in decision.source_ids):
+            raise ValueError('CURRENT_REVIEW_SOURCES_REQUIRED')
+        if any(getattr(decision,a) != 'PENDING' for a in DIMENSIONS) and (
+                len(decision.reason.strip()) < 12 or not decision.source_ids):
+            raise ValueError('SOURCE_REVIEW_REASON_AND_EVIDENCE_REQUIRED')
+
+
 def inspect_review(entry, candidate, record):
-    w = prepare(entry,candidate)
+    raw=record.model_dump(mode='json') if hasattr(record,'model_dump') else record
+    from . import reading_impact_review as impact
+    if isinstance(raw,dict) and raw.get('version')==impact.VERSION:
+        return impact.inspect_review(entry,candidate,raw)
+    w = _prepare_fields(entry,candidate)
     out = dict(state='REVIEW_REQUIRED',reason_code='FACT_SOURCE_REVIEW_REQUIRED',
         source_review_worksheet=w,source_review_receipt=None,source_review_record=None)
     if record is None:
@@ -107,12 +136,7 @@ def inspect_review(entry, candidate, record):
     if (r.binding_sha256 != w['binding_sha256'] or r.authority != w['expected_authority'] or
             set(r.decisions) != set(w['fields']) or not r.reviewer.strip() or not r.evidence.strip()):
         raise ValueError('INVALID_OR_STALE_FACT_SOURCE_REVIEW')
-    for decision in r.decisions.values():
-        if len(set(decision.source_ids)) != len(decision.source_ids) or any(k not in w['source_catalog'] for k in decision.source_ids):
-            raise ValueError('CURRENT_REVIEW_SOURCES_REQUIRED')
-        if any(getattr(decision,a) != 'PENDING' for a in DIMENSIONS) and (
-                len(decision.reason.strip()) < 12 or not decision.source_ids):
-            raise ValueError('SOURCE_REVIEW_REASON_AND_EVIDENCE_REQUIRED')
+    validate_decision_evidence(r.decisions,w['source_catalog'])
     record = r.model_dump(mode='json')
     receipt = dict(version=VERSION,review=record,review_sha256=sha(record),
         candidate_sha256=sha(candidate),request_sha256=entry['request_sha256'],

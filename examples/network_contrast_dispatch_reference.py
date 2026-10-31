@@ -110,11 +110,17 @@ def fact_reference(entry, data):
             return dict(status=status,source_ids=ids(doc))
         raw['scientific_statements']={k:statement(True,'science') for k in ('assignment_outcome_independence','consistency','finite_conditional_means')}
         raw['mean_sufficiency']=dict(statement(finite,'sufficiency'),scope='ALL_BINARY_ASSIGNMENTS' if finite else 'UNKNOWN',covered_nodes=nodes if finite else [])
-    if entry.get('network_fact_contract') == 'network-policy-definition-refs-1':
+    if entry.get('network_fact_contract') in ('network-policy-definition-refs-1', 'network-policy-record-definitions-1', 'network-policy-scopes-1', 'network-policy-scopes-2'):
         # Hand-authored fixture only: never apply this to a returned LLM answer.
         raw['assignment']['definition_refs']=['study'] if raw['assignment']['probabilities'] else []
         for side in ('first','second'):raw['target'][side]['definition_refs']=['study']
         for info in raw['information']:info['definition_refs']=['study']
+        if entry.get('network_fact_contract') in ('network-policy-record-definitions-1','network-policy-scopes-1','network-policy-scopes-2'):
+            raw['mean_sufficiency']['definition_refs']=['study'] if raw['mean_sufficiency']['covered_nodes'] else []
+    if entry.get('network_fact_contract') in ('network-policy-scopes-1','network-policy-scopes-2'):
+        for info in raw['information']:
+            info.update(scope_status='DECLARED' if info['outcome_nodes'] else 'UNSPECIFIED',
+                        scope_source_ids=list(info['source_ids']) if info['outcome_nodes'] else [])
     return raw
 
 

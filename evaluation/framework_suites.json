@@ -75,7 +75,11 @@
         "tests_gateway/test_policy_reading_contracts.py",
         "tests_gateway/test_contrast_reading_contracts.py",
         "tests_gateway/test_policy_definition_refs.py",
-        "tests_gateway/test_student_handoff.py"
+        "tests_gateway/test_student_handoff.py",
+        "tests_gateway/test_policy_interface_contracts.py",
+        "tests_gateway/test_reading_material_handoff.py",
+        "tests_gateway/test_policy_stage_ownership.py",
+        "tests_gateway/test_assumption_dependency_contract.py"
       ]
     },
     {
@@ -104,10 +108,15 @@
         "tests_gateway/test_network_r2_contrast.py",
         "tests_gateway/test_network_observational_policy_dispatch.py",
         "tests_gateway/test_network_effect_dispatch.py",
+        "tests_gateway/test_network_design_entry.py",
         "tests_gateway/test_business_case.py",
         "tests_gateway/test_business_dispatch.py",
         "tests_gateway/test_reverse_direct_adapter.py",
-        "tests_gateway/test_whole_case_information_evidence.py"
+        "tests_gateway/test_whole_case_information_evidence.py",
+        "tests_gateway/test_method_diagnostics.py",
+        "tests_gateway/test_contrast_method_diagnostics.py",
+        "tests_gateway/test_effect_method_diagnostics.py",
+        "tests_gateway/test_observational_method_diagnostics.py"
       ]
     },
     {
@@ -164,7 +173,11 @@
         "tests_gateway/test_network_dispatch.py::test_finite_samples_are_not_population_laws",
         "tests_gateway/test_fact_source_review.py::test_parent_or_reviewer_citations_do_not_repair_child_coverage",
         "tests_gateway/test_student_handoff.py::test_recommended_entry_uses_one_config_without_changing_legacy_defaults",
-        "tests_gateway/test_student_handoff.py::test_all_five_reader_families_have_one_component_owner"
+        "tests_gateway/test_student_handoff.py::test_all_five_reader_families_have_one_component_owner",
+        "tests_gateway/test_method_diagnostics.py::test_read_only_entry_uses_native_gates_and_does_not_create_approval",
+        "tests_gateway/test_contrast_method_diagnostics.py::test_readonly_public_entry_uses_registry_and_actual_pair_reviews",
+        "tests_gateway/test_effect_method_diagnostics.py::test_readonly_entry_and_saved_evidence_never_invoke_a_backend",
+        "tests_gateway/test_observational_method_diagnostics.py::test_readonly_entry_uses_existing_gates_without_reexecuting_or_granting_permission"
       ]
     },
     "chain": {
@@ -172,6 +185,7 @@
       "selectors": [
         "tests_gateway/test_framework_contract.py",
         "tests_gateway/test_network_dispatch.py",
+        "tests_gateway/test_network_design_entry.py",
         "tests_gateway/test_network_bounded_dispatch.py",
         "tests_gateway/test_network_effect_dispatch.py",
         "tests_gateway/test_network_observational_policy_dispatch.py",
@@ -192,7 +206,15 @@
         "tests_gateway/test_policy_reading_contracts.py::test_explicit_recheck_retains_profile_rules_and_requires_new_full_reviews",
         "tests_gateway/test_policy_reading_contracts.py::test_registered_bounded_reader_still_needs_every_native_approval",
         "tests_gateway/test_policy_definition_refs.py",
-        "tests_gateway/test_student_handoff.py"
+        "tests_gateway/test_student_handoff.py",
+        "tests_gateway/test_policy_interface_contracts.py",
+        "tests_gateway/test_reading_material_handoff.py",
+        "tests_gateway/test_policy_stage_ownership.py",
+        "tests_gateway/test_assumption_dependency_contract.py",
+        "tests_gateway/test_method_diagnostics.py",
+        "tests_gateway/test_contrast_method_diagnostics.py",
+        "tests_gateway/test_effect_method_diagnostics.py",
+        "tests_gateway/test_observational_method_diagnostics.py"
       ]
     }
   }

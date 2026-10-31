@@ -74,7 +74,7 @@ def empty_result():
                 production_admission=False, estimation_handoff_allowed=False)
 
 
-def _fact_request(bundle, binding, reader_id, reference_format, query, contexts, *, assignment_semantics=None, network_fact_contract=None, signed_comparison=False, ordered_target=None, target_contract=None, reviewed_target_context=None):
+def _fact_request(bundle, binding, reader_id, reference_format, query, contexts, *, assignment_semantics=None, network_fact_contract=None, signed_comparison=False, ordered_target=None, target_contract=None, reviewed_target_context=None, material_inventory=None, reviewed_policy_request=None):
     # Preserve the public diagnostic before the common registry checks metadata.
     if reader_id == 'VARIABLE_DAG_FACTS' and reference_format not in ('short_refs', 'source_hash'):
         raise ValueError('UNKNOWN_FACT_REFERENCE_FORMAT')
@@ -97,6 +97,12 @@ def _fact_request(bundle, binding, reader_id, reference_format, query, contexts,
     else:
         raise ValueError('UNKNOWN_FACT_READER')
     focus = {key: query[key] for key in ('query_id', 'business_goal', 'requested_comparison_or_policy', 'semantics')}
+    if reviewed_policy_request is not None:
+        if reader_id not in ('NETWORK_FIXED_POLICY_FACTS','NETWORK_POLICY_CONTRAST_FACTS'):
+            raise ValueError('POLICY_FOCUS_READER_MISMATCH')
+        adapter=evidence_contract(reviewed_policy_request['contract'])
+        if not hasattr(adapter,'policy_focus'):raise ValueError('POLICY_FOCUS_CONTRACT_REQUIRED')
+        focus=adapter.policy_focus(reviewed_policy_request['raw_query'],query_id=query['query_id'],binding=binding)
     if ordered_target is not None:
         if reader_id!='NETWORK_RANDOMIZED_EFFECT_FACTS':raise ValueError('ORDERED_LOCAL_READER_REQUIRED')
         from cfm_id_llm import ordered_target_handoff
@@ -113,6 +119,9 @@ def _fact_request(bundle, binding, reader_id, reference_format, query, contexts,
     request['user'] += ('\n\n本次只读取下面选定子问题。以下定位信息及此前助手提问均不是可引用事实来源；'
                         + method_instruction
                         + json.dumps(dict(focus=focus, assistant_context_not_evidence=contexts), ensure_ascii=False))
+    if material_inventory is not None:
+        from .reading_material_handoff import attach
+        request=attach(request,material_inventory,reading_contract.reference_catalog(bundle,binding=binding))
     return request
 
 
@@ -228,17 +237,28 @@ def prepare_reader(intake, query_id, *, query_review=None, reading_revision=None
         from cfm_id_llm.compact_response_contract import REVIEWED_TARGET_PROFILES,ROLE_REQUEST_PROFILES
         ordered_target=(s.candidate['queries'][int(query_id[1:])-1]
             if s.a0_response_contract in REVIEWED_TARGET_PROFILES and reader_id=='NETWORK_RANDOMIZED_EFFECT_FACTS' else None)
+        material_inventory=None
+        policy_request=None
+        if reader_id in ('NETWORK_FIXED_POLICY_FACTS','NETWORK_POLICY_CONTRAST_FACTS') and hasattr(conditioning,'policy_focus'):
+            policy_request=dict(contract=s.a0_response_contract,raw_query=deepcopy(s.candidate['queries'][int(query_id[1:])-1]))
+        if s.material_handoff is not None:
+            from .reading_material_handoff import build,FAMILIES
+            if reader_id not in FAMILIES:
+                raise DispatchError('ADAPTER_NOT_CONNECTED','MATERIAL_HANDOFF_NOT_CONNECTED_FOR_READER')
+            material_inventory=build(s,query_id,review.model_dump(mode='json'))
         request=_fact_request(bundle,fact_binding,reader_id,s.fact_format,query,contexts,
                               assignment_semantics=s.assignment_semantics, network_fact_contract=s.network_fact_contract,
                               signed_comparison=evidence_contract(s.a0_response_contract) is not None,ordered_target=ordered_target,
                               target_contract=s.a0_response_contract if ordered_target is not None else None,
-                              reviewed_target_context=target_context)
+                              reviewed_target_context=target_context,material_inventory=material_inventory,reviewed_policy_request=policy_request)
         digest = sha(dict(intake=out['intake_sha256'], query_id=query_id,
                           query_review=review.model_dump(mode='json'), request=request))
         entry = dict(out, state='READY_TO_READ', reader_id=reader_id,
                     bundle=bundle, request=request, request_sha256=digest,
                     reference_format=s.fact_format, fact_binding_sha256=fact_binding,
                     query_review=review.model_dump(mode='json'))
+        if material_inventory is not None:entry['material_inventory']=material_inventory
+        if policy_request is not None:entry['reviewed_policy_request']=policy_request
         if s.assignment_semantics is not None:
             entry['assignment_semantics'] = s.assignment_semantics
         if target_context is not None:
@@ -299,6 +319,18 @@ def inspect_methods(intake, query_id, *, query_review, candidate, request_sha256
     except (ValueError,TypeError,KeyError,AttributeError):
         return dict(empty_result(),reason_code='INVALID_OR_STALE_READING_CHANGE_REVIEW')
     try:
+        if entry.get('material_inventory') is not None:
+            from .reading_impact_review import VERSION,prepare,pending_assessment,invalid_assessment
+            if source_review is None:
+                try:sheet=prepare(source_entry,candidate)
+                except (ValueError,TypeError,KeyError,AttributeError):
+                    return _revision_evidence(dict(empty_result(),reason_code='INVALID_MATERIAL_ACCOUNTING_INPUT',
+                        reading_assessment=invalid_assessment()),entry)
+                return _revision_evidence(dict(empty_result(),state='REVIEW_REQUIRED',reason_code='MATERIAL_ACCOUNTING_REVIEW_REQUIRED',
+                    source_review_worksheet=sheet,reading_assessment=pending_assessment()),entry)
+            raw=source_review.model_dump(mode='json') if hasattr(source_review,'model_dump') else source_review
+            if not isinstance(raw,dict) or raw.get('version')!=VERSION:
+                return _revision_evidence(dict(empty_result(),reason_code='MATERIAL_ACCOUNTING_REVIEW_VERSION_REQUIRED'),entry)
         if source_review is not None:
             from .fact_source_review import inspect_review
             try:
@@ -311,6 +343,7 @@ def inspect_methods(intake, query_id, *, query_review, candidate, request_sha256
             # it at execution makes previously issued native approvals stale.
             entry = dict(entry,source_review_record=deepcopy(source['source_review_record']),
                          source_review_receipt=deepcopy(source['source_review_receipt']))
+            if 'reading_assessment' in source:entry['reading_assessment']=deepcopy(source['reading_assessment'])
         binding = capabilities.business_binding(entry['reader_id'])
         if information_evidence_review is not None and not binding.information_evidence_review:
             return dict(empty_result(),reason_code='INFORMATION_EVIDENCE_REVIEW_NOT_CONNECTED_FOR_READER')
@@ -351,6 +384,10 @@ def inspect_methods(intake, query_id, *, query_review, candidate, request_sha256
 
 
 def _revision_evidence(result,entry):
+    assessment=entry.get('reading_assessment') or result.get('reading_assessment')
+    if assessment:
+        from .reading_impact_review import report_result
+        result=report_result(result,assessment)
     if entry.get('source_review_receipt'):
         result=dict(result,source_review_receipt=deepcopy(entry['source_review_receipt']))
     if 'reading_revision' in entry:

@@ -35,7 +35,7 @@ ROLE_POPULATION = 'local-role-ownership-3'
 ROLE_FIELDS = 'local-role-ownership-4'
 QUERY_CONDITIONING = 'query-conditioning-1'
 ORGANIZED = 'organized-reading-1'
-LiteralProfile = Literal['explicit-sections-1', 'explicit-field-roles-1', 'evidence-slots-1', 'inline-evidence-1', 'inline-target-roles-1', 'inline-output-guide-1', 'inline-unified-contract-1', 'inline-unified-contract-2', 'inline-unified-contract-3', 'inline-unified-contract-4', 'inline-unified-contract-5', 'inline-unified-contract-6', 'inline-unified-contract-7', 'inline-unified-contract-8', 'inline-unified-contract-9', 'inline-unified-contract-10', 'inline-unified-contract-11', 'ordered-local-comparison-1', 'ordered-local-comparison-2', 'local-change-quantity-1', 'local-change-quantity-2', 'local-role-ownership-1', 'local-role-ownership-2', 'local-role-ownership-3', 'local-role-ownership-4', 'query-conditioning-1', 'organized-reading-1']
+LiteralProfile = Literal['explicit-sections-1', 'explicit-field-roles-1', 'evidence-slots-1', 'inline-evidence-1', 'inline-target-roles-1', 'inline-output-guide-1', 'inline-unified-contract-1', 'inline-unified-contract-2', 'inline-unified-contract-3', 'inline-unified-contract-4', 'inline-unified-contract-5', 'inline-unified-contract-6', 'inline-unified-contract-7', 'inline-unified-contract-8', 'inline-unified-contract-9', 'inline-unified-contract-10', 'inline-unified-contract-11', 'ordered-local-comparison-1', 'ordered-local-comparison-2', 'local-change-quantity-1', 'local-change-quantity-2', 'local-role-ownership-1', 'local-role-ownership-2', 'local-role-ownership-3', 'local-role-ownership-4', 'query-conditioning-1', 'organized-reading-1', 'single-action-target-1', 'single-action-target-2']
 Profile = LiteralProfile | None
 PROFILES = get_args(LiteralProfile)
 UNIFIED_PROFILES = (UNIFIED, UNIFIED_STRUCTURE, UNIFIED_INFORMATION, UNIFIED_WIRE_EVIDENCE, UNIFIED_LOCAL_STATE, UNIFIED_ENDPOINTS, UNIFIED_OPERATORS, UNIFIED_SOURCE_SCOPE, UNIFIED_STRUCTURE_SOURCE, UNIFIED_FOCUSED, UNIFIED_ALIGNMENT)
@@ -49,6 +49,8 @@ LOCAL_PROFILE_MODULES = {
     ROLE_OWNERSHIP: 'local_role_ownership', ROLE_SCOPE: 'scoped_role_contract',
     ROLE_POPULATION: 'local_population_contract', ROLE_FIELDS: 'local_field_contract',
     QUERY_CONDITIONING: 'query_conditioning_contract', ORGANIZED: 'organized_reading_contract',
+    'single-action-target-1': 'policy_action_contract',
+    'single-action-target-2': 'policy_action_compat',
 }
 LOCAL_COMPARISON_PROFILES = tuple(LOCAL_PROFILE_MODULES)
 REVIEWED_TARGET_PROFILES = tuple(p for p in LOCAL_COMPARISON_PROFILES if p != ORDERED_LOCAL)
@@ -153,6 +155,11 @@ def scope_recheck_roles(roles, *, contract, user_prompt, candidate):
             if (index < len(queries) and isinstance(queries[index], dict)
                     and queries[index].get('kind') in kinds):
                 description = semantics.get(parts[3], {}).get('description')
+            if 'PolicyActionQuery' in definitions and index < len(queries) and isinstance(queries[index], dict):
+                policy = definitions['PolicyActionQuery']['properties']
+                if queries[index].get('kind') in policy['kind']['enum']:
+                    props = definitions[policy['semantics']['$ref'].rsplit('/', 1)[1]]['properties']
+                    description = props.get(parts[3], {}).get('description')
         result.append(dict(row, field_role=description) if description else row)
     return result
 

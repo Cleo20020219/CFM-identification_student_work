@@ -57,6 +57,7 @@ def diagnose(case, candidate, *, response_contract=None, reference_contract=None
             if (e.get('code') not in ('missing', 'TARGET_OPERATOR_CONFLICT', 'REFERENCE_CONTEXT_MISMATCH') and
                     not (response_contract in ('ordered-local-comparison-1','ordered-local-comparison-2','local-change-quantity-1') and exc.code == 'A0_ORDERED_COMPARISON_REJECTED' and e.get('code') in ordered_codes) and
                     not (response_contract in ROLE_REQUEST_PROFILES and exc.code=='A0_CHANGE_REQUEST_REJECTED' and e.get('code') in ('CHANGE_SCOPE_CONFLICT','CHANGE_LEGACY_FIELD_FORBIDDEN','CHANGE_OBJECT_REQUIRED','CHANGE_QUANTITY_INVALID','CHANGE_SHAPE_INVALID')) and
+                    not (exc.code=='A0_POLICY_ACTION_REJECTED' and e.get('code') in ('POLICY_ACTION_OBJECT_REQUIRED','POLICY_DUPLICATE_OWNER_FORBIDDEN','POLICY_ALIAS_CONFLICT')) and
                     not (exc.code=='A0_CONDITIONING_CONTEXT_REJECTED' and e.get('code') in ('CONDITIONING_REFERENCES_INVALID','CONDITIONING_CLAIM_INVALID'))):
                 continue
             row = dict(field_path=''.join('/'+str(v) for v in e['path']), error_code=e['code'])

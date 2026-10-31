@@ -18,7 +18,7 @@ TARGET = '本记录的引用覆盖比较目的和方向、具体评价对象及�
 
 def _rules(props):
     rules=[]
-    if any(k in props for k in ('nodes','probabilities','outcome_nodes','population','assignment')):
+    if any(k in props for k in ('nodes','probabilities','outcome_nodes','population','assignment','groups','clusters','core_collaborators')):
         rules.append(NAMES)
     if 'own' in props and 'exposure' in props:rules.append(ARMS)
     if 'operation' in props or ('population' in props and 'aggregation' in props):rules.append(TARGET)

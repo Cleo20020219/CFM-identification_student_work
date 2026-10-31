@@ -48,6 +48,24 @@
 
 `network-policy-definition-refs-1` 是显式实验选项：直接主张引用与编码/名册定义依赖分别保存，定义不能变成新的总体信息，也不能自动补目标或覆盖名单。本轮不提升它或其他实验配置为学生默认。
 
+### 可选的政策定义引用样板
+
+`network-policy-record-definitions-1` 复用上述显式依赖解析，并将其补齐到均值充分性记录的 `covered_nodes`。每条记录保留自己的主张来源；模型另用 `definition_refs` 明确引用名册/编码定义。定义只解释名称和编码，不证明政策选择、总体信息存在或科学条件已接受。缺直接主张、缺定义依赖、来源被拒绝或科学条件未定，仍须阻断。
+
+维护入口是 `policy_record_definitions`，公共解析仍在 `policy_evidence_dependencies`；政策均值和两政策差值共享此规则。来源工作表、绑定、诊断、重读及原生审核复用既有生命周期，不自动添加模型未选的来源。旧协议保持原请求。该配置仍为显式实验选项，四次事实读取的对照结果见[真实验收记录](NETWORK_DESIGN_LIVE_ACCEPTANCE_ZH.md#显式定义依赖接口的四次事实读取对照)。
+
 既有 R3、政策均值、差值合同测试分别在 `test_fact_reading_contracts`、`test_policy_reading_contracts`、`test_contrast_reading_contracts`。局部效应与 DAG 的原生正负例继续由原专项测试负责；`test_student_handoff` 检查五类共同登记、公共配置和三个教学链路。固定框架的 S87 只是验收索引，不是新数学分类。
+
+### 主政策、记录范围和状态引用的接口对照
+
+显式实验组合 `single-action-target-1` + `network-policy-scopes-1` 修正三处字段职责，未替换推荐配置：
+
+- 政策均值和两政策比较的 A0 主安排只在 `semantics.intervention` 填一次；比较基准和方向独立保留。旧消费者的 `policy_assignment` 是有记录的同值兼容视图，不是第二次提取。重复填写、缺主端或引用不成立均阻断；不借目标句补写。
+- 每条总体／样本信息分开记录 `scope_status` 和 `scope_source_ids`。`UNSPECIFIED` 的对象与坐标集合须为空；`DECLARED` 须有明确对象及覆盖原句。名册定义、信息存在、信息覆盖分别审核。范围未说明的有限记录可与已知总体分布并存，但不能替代总体信息。
+- 科学状态与引用配对同时进入首次 Schema 和解析检查；公开复查给出封闭错误码及字段规则，不回传任意异常内容。`NOT_STATED` 不得携带引用；明确未决定／拒绝等状态须引用相应原文。
+
+维护模块分别为 `policy_action_contract` 和 `policy_scope_reading`，登记、来源工作表、重读、科学审核及证书重放沿用公共生命周期。测试集中在 `test_policy_interface_contracts`，归入现有 S86 验收义务。历史配置不自动改写为新协议。
+
+显式候选 `network-policy-scopes-2` 的定义依赖组合规则归 `policy_assumption_dependencies` 一处维护，Schema、解析、审核说明和诊断共同消费；政策均值和两政策差值均已配对。旧协议与推荐起点不变，详见[合同及实际验收](ASSUMPTION_DEPENDENCY_CONTRACT_ZH.md)。
 
 新增能力要提交哪些证明、接口和测试见[维护规则](EXTENSION_MAINTENANCE_ZH.md)。最新实际成绩统一见[本次交接验收](DELIVERY_READINESS_ZH.md)；本页不累积每轮测试计数。

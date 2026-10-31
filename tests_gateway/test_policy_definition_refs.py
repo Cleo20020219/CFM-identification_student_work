@@ -4,6 +4,7 @@ import json
 import pytest
 from cfm_id import business_dispatch as d, fact_source_review as source, fact_reading_revision as revision
 from cfm_id_llm import policy_evidence_dependencies as wire, fact_reading_contracts as registry
+from cfm_id_llm import policy_record_definitions as records
 from examples import network_contrast_dispatch_reference as contrast
 from examples.network_dispatch_reference import approval_records
 from tests_gateway import test_policy_reading_contracts as mean
@@ -19,8 +20,9 @@ def setup(family='contrast', kind='point', profile=wire.CONTRACT):
 
 @pytest.mark.parametrize('family', ['mean','contrast'])
 @pytest.mark.parametrize('kind', ['point','partial'])
-def test_declared_sources_preserve_native_math_and_independent_replay(family,kind):
-    s,e,o=setup(family,kind);raw=deepcopy(o['candidate']);validate_candidate(e,raw)
+@pytest.mark.parametrize('profile', [wire.CONTRACT, records.CONTRACT])
+def test_declared_sources_preserve_native_math_and_independent_replay(family,kind,profile):
+    s,e,o=setup(family,kind,profile);raw=deepcopy(o['candidate']);validate_candidate(e,raw)
     w=source.prepare(e,raw);path='/target/first' if family=='contrast' else '/target'
     assert w['fields'][path]['explicit_definitions']['study']['source_ids']==raw['study']['source_ids']
     assert w['fields'][path]['citation_groups']['source_ids']==(raw['target']['first'] if family=='contrast' else raw['target'])['source_ids']
@@ -39,6 +41,44 @@ def test_declared_sources_preserve_native_math_and_independent_replay(family,kin
     assert row['direct_source_ids']==raw['information'][0]['source_ids']
     assert set(raw['study']['source_ids'])<=set(row['resolved_source_ids'])
     if kind=='partial':assert r['mathematical_claim']['sharp']
+
+
+@pytest.mark.parametrize('defect', ['missing_dependency','missing_direct_claim','wrong_scope_source','refused_science'])
+def test_scientific_scope_definitions_never_establish_scope_or_permission(defect,monkeypatch):
+    s,e,o=setup('contrast','partial',records.CONTRACT);raw=o['candidate'];claim=raw['mean_sufficiency']
+    if defect=='missing_dependency':claim['definition_refs']=[]
+    elif defect=='missing_direct_claim':claim['source_ids']=[]
+    elif defect=='wrong_scope_source':claim['source_ids']=raw['study']['source_ids']
+    else:raw['scientific_statements']['consistency']['status']='NOT_ADOPTED'
+    before=deepcopy(raw)
+    monkeypatch.setattr('cfm_id.network_contrast_dispatch._compile_pair',lambda *_:pytest.fail('invalid or refused scope reached math'))
+    if defect=='wrong_scope_source':
+        review=record(source.prepare(e,raw));review['decisions']['/mean_sufficiency']['source_coverage']='REJECTED'
+        options=dict(o,source_review=review)
+    else:options=o
+    r=d.execute(s,'q1',**options,research_protocol_selected=True)
+    expected=('READING_RECHECK_REQUIRED' if defect=='wrong_scope_source' else
+              'ADAPTER_NOT_CONNECTED' if defect=='refused_science' else 'CHECK_BLOCKED')
+    assert r['state']==expected and not r['backend_called'] and raw==before
+
+
+def test_scientific_scope_definition_is_visible_bound_and_located_on_recheck():
+    s,e,o=setup('contrast','partial',records.CONTRACT);raw=o['candidate'];before=deepcopy(raw)
+    w=source.prepare(e,raw);row=w['fields']['/mean_sufficiency']
+    assert row['explicit_definitions']['study']['source_ids']==raw['study']['source_ids']
+    review=record(w);p=d.inspect_methods(s,'q1',**dict(o,source_review=review))
+    dep=next(r for r in p['evidence_dependencies']['resolutions'] if r['field_path']=='/mean_sufficiency')
+    assert dep['direct_source_ids']==raw['mean_sufficiency']['source_ids']
+    assert dep['definition_refs']==['study'] and not p['evidence_dependencies']['scientific_approval']
+    sheet=revision.prepare_recheck(s,'q1',**o)['feedback_worksheet']
+    fresh=revision.prepare_recheck(s,'q1',**o,feedback=feedback(sheet,path='/mean_sufficiency',doc='sufficiency'))
+    body=json.JSONDecoder().raw_decode(fresh['request']['user'])[0]
+    assert body['evidence_dependency_contract']['version']==records.CONTRACT
+    constraints=registry.contract_for_entry(fresh).public_constraints(fresh,['/mean_sufficiency'])
+    assert any(r['field_path'].startswith('/mean_sufficiency/') for r in constraints)
+    raw['study']['source_ids']=raw['target']['source_ids']
+    assert d.execute(s,'q1',**o,source_review=review,research_protocol_selected=True)['state']=='CHECK_BLOCKED'
+    assert before['mean_sufficiency']==raw['mean_sufficiency']
 
 
 @pytest.mark.parametrize('defect', ['missing_dependency','unknown_definition','duplicate_dependency','no_direct_claim','foreign_source','stale_context','wrong_name'])

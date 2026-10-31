@@ -1,4 +1,4 @@
-"""Reviewed D1/E1 local effects -> existing R1a composition and replay.
+"""Reviewed D1-D6/E1-E5 local effects -> existing R1a composition and replay.
 
 The target averages complete assignments under q conditional on each local
 arm. It is neither a fixed-policy effect nor a sufficiency-licensed exposure
@@ -11,6 +11,8 @@ from .business_dispatch import (sha, worksheet, checked_review, DispatchReview,
     DispatchError, empty_result, PLAN_DECISIONS)
 from cfm_id_llm import network_effect_reading as reading
 from cfm_id_bridge.scientific_binding import canonical_data
+from . import network_design_adapter as design_adapter
+from cfm_id_llm import network_design_reading as design_fields
 
 FAMILY = 'NETWORK_RANDOMIZED_EFFECT_FACTS'
 METHOD = 'R1A_COMPOSITION'
@@ -35,9 +37,12 @@ def target_coordinates(c):
         unit_weights=[str(Fraction(1,len(t.population))) if n in t.population else '0' for n in c.study.nodes],
         first=[t.first.own,t.first.exposure], second=[t.second.own,t.second.exposure],
         operation=t.operation, remaining_assignment=t.remaining_assignment,
-        assignment=dict(kind=c.assignment.kind,probabilities=c.assignment.probabilities), exposure=c.exposure.kind,
+        assignment=dict(kind=c.assignment.kind, **{k:getattr(c.assignment,k) for k in design_fields.ASSIGNMENT_FIELDS
+            if getattr(c.assignment,k) is not None}), exposure=c.exposure.kind,
         treatment=c.study.treatment,outcome=c.study.outcome,context=c.study.context,
         native_symbol_mapping=dict(treatment='treatment',outcome='outcome',context='W'))
+    if c.exposure.core_collaborators is not None:
+        result['core_collaborators']=deepcopy(c.exposure.core_collaborators)
     if c.study.outcome_kind=='COUNT':
         result['outcome_domain_embedding']=dict(business_kind='COUNT',native_kind='continuous',
             scope='LOCAL_POINT_MEAN_ONLY',distributional_continuity_assumed=False,
@@ -65,8 +70,9 @@ def inspect_methods(entry, raw, *, note_review=None):
         missing,unsupported=[],[]
         if t.kind in TARGET_KINDS and t.kind!=entry['selected_query']['target']['kind']:
             return dict(out,state='READING_RECHECK_REQUIRED',reason_code='EFFECT_TARGET_DISAGREES_WITH_REVIEWED_QUERY')
-        for label,condition in [('完整分配规则',c.design_facts.assignment_rule_available),
-                ('处理前固定网络',c.design_facts.network_fixed_before_treatment),
+        assignment_question = design_adapter.assignment_availability_question(c.design_facts.assignment_rule_available)
+        if assignment_question: missing.append(assignment_question)
+        for label,condition in [('处理前固定网络',c.design_facts.network_fixed_before_treatment),
                 ('评价名单在抽签前固定',t.population_fixed_before_assignment),
                 ('两端结果定义、期间和背景相同',t.shared_outcome_and_context)]:
             if condition.value is None: missing.append('请核对原文是否明确：'+label+'。')
@@ -79,14 +85,19 @@ def inspect_methods(entry, raw, *, note_review=None):
             elif condition.status=='NOT_ADOPTED': unsupported.append('DECLARED_MODEL_EXCLUDES:'+name)
         if c.additional_restrictions: unsupported.append('ADDITIONAL_EFFECT_MODEL_REQUIRES_SEPARATE_ADAPTER')
         if c.study.graph_kind=='OTHER' or c.study.outcome_kind=='OTHER': unsupported.append('EFFECT_STUDY_SCOPE_NOT_CONNECTED')
-        if c.assignment.kind in ('OTHER','UNIFORM_FIXED_QUOTA'): unsupported.append('EFFECT_D1_DESIGN_ONLY')
-        if c.exposure.kind in ('OTHER','NONE'): unsupported.append('EFFECT_E1_EXPOSURE_ONLY')
+        if c.assignment.kind=='OTHER': unsupported.append('EFFECT_ASSIGNMENT_NOT_CONNECTED')
+        gaps, exclusions=design_adapter.component_gaps(c,local_effect=True)
+        if 'CONFLICTING_FIRST_STAGE_EXCLUSION' in exclusions:
+            return dict(out,state='READING_RECHECK_REQUIRED',reason_code='CONFLICTING_FIRST_STAGE_EXCLUSION')
+        missing += ['请补充原文中的设计或暴露字段：'+field for field in gaps]
+        unsupported += exclusions
+        if c.exposure.kind in ('OTHER','NONE'): unsupported.append('EFFECT_EXPOSURE_NOT_CONNECTED')
         if t.kind=='OTHER' or t.operation=='OTHER' or t.aggregation=='OTHER' or t.remaining_assignment=='OTHER':
             unsupported.append('TARGET_OUTSIDE_DESIGN_STANDARDIZED_LOCAL_CONTRAST')
         if (not c.study.nodes or c.study.graph_kind=='UNKNOWN' or c.study.edge_list_complete is not True or
             c.study.outcome_kind=='UNKNOWN' or not all(x and x.strip() for x in (c.study.treatment,c.study.outcome,c.study.context))):
             missing.append('请明确完整对象名单、处理前网络、处理与结果含义及期间背景。')
-        if c.assignment.kind=='UNKNOWN' or c.assignment.probabilities is None or set(c.assignment.probabilities)!=set(c.study.nodes):
+        if c.assignment.kind=='INDEPENDENT_BERNOULLI' and (c.assignment.probabilities is None or set(c.assignment.probabilities)!=set(c.study.nodes)):
             missing.append('请说明原试点是否逐对象独立抽签，以及每个对象的已知概率。')
         if c.exposure.kind=='UNKNOWN' or not c.exposure.source_ids:
             missing.append('请明确同伴分组定义；不能仅凭受到同事影响而选择分组规则。')
@@ -103,7 +114,7 @@ def inspect_methods(entry, raw, *, note_review=None):
         if unsupported: return dict(out,state='ADAPTER_NOT_CONNECTED',reason_code=unsupported[0])
         if missing: return dict(out,state='NEEDS_INPUT',reason_code='NETWORK_EFFECT_FACTS_INCOMPLETE')
         a,e=t.first.own,t.first.exposure;b,f=t.second.own,t.second.exposure
-        if e not in (0,1) or f not in (0,1) or (t.kind=='DIRECT_EFFECT' and not (a!=b and e==f)) or (
+        if (t.kind=='DIRECT_EFFECT' and not (a!=b and e==f)) or (
                 t.kind=='SPILLOVER_EFFECT' and not (a==b and e!=f)):
             return dict(out,state='READING_RECHECK_REQUIRED',reason_code='LOCAL_CONTRAST_DOES_NOT_MATCH_EFFECT_KIND',
                 clarification_questions=['请核对效应名称、两端条件和相减方向；系统不会交换两端或补齐基准。'])
@@ -142,7 +153,7 @@ def inspect_methods(entry, raw, *, note_review=None):
         target=target_coordinates(c)
         binding=sha(dict(entry=entry,raw=raw,target=target,source_index=eligible[0]))
         row=dict(method=METHOD,source_index=eligible[0],applicability='NOT_CHECKED_BEFORE_SCIENCE_REVIEW',
-            reading_worksheet=worksheet(binding,READING_DECISIONS),science_worksheet=worksheet(binding,SCIENCE_DECISIONS))
+            reading_worksheet=worksheet(binding,READING_DECISIONS),science_worksheet=worksheet(binding,(*SCIENCE_DECISIONS,*design_adapter.extra_science(c))))
         binding=sha(dict(entry=entry,raw=raw,methods=[row],target=target))
         return dict(out,state='REVIEW_REQUIRED',proposed_target=target,methods=[row],plan_sha256=binding,
             plan_worksheet=worksheet(binding,PLAN_DECISIONS))
@@ -176,7 +187,6 @@ def _native_payload(value):
 
 
 def _compile(plan, row, records):
-    from pfn_pipeline.identification import make_heterogeneous_bernoulli_arm_task
     from pfn_pipeline.identification_composition import EffectQueryV18
     from pfn_pipeline.identification_a4_shadow import declare_a4_source
     from pfn_pipeline._internal.identification.schemas import NetworkExposureSpec
@@ -186,10 +196,8 @@ def _compile(plan, row, records):
     net=NetworkExposureSpec(network_id='effect_'+sha(dict(study=c.study.model_dump(),context=c.study.context)),
         node_ids=c.study.nodes,undirected_edges=c.study.edges)
     evidence=records['science_review'].evidence+'; review='+sha(records['science_review'].model_dump(mode='json'))
-    task=make_heterogeneous_bernoulli_arm_task(net,propensities=c.assignment.probabilities,node_id=t.population[0],
-        own_treatment_value=t.first.own,exposure_value=t.first.exposure,exposure_definition='strict_majority',
-        source='Reviewed original source locators: '+','.join(s.source_ids),evidence=evidence,
-        admitted=True,synthetic=True,query_authority='TRUSTED_FIXTURE',outcome_kind='continuous' if c.study.outcome_kind=='COUNT' else c.study.outcome_kind.lower())
+    task=design_adapter.make_arm(c,net,
+        source='Reviewed original source locators: '+','.join(s.source_ids), evidence=evidence)
     source=declare_a4_source(task,source_id='reviewed_effect_source_'+str(row['source_index']),operator=s.operator,
         provenance='Reviewed original source locators: '+','.join(s.source_ids),admission='ADMITTED',
         availability=s.availability,regime='experimental',outcome_nodes=tuple(s.outcome_nodes),node_order=tuple(c.study.nodes),

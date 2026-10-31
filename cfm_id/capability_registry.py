@@ -74,7 +74,7 @@ def business_bindings():
                 (dag_routes[method].adapter_type.replay,)) for method in dag.METHODS),
             dag.inspect_methods, dag.native_reviews_from_json, dag._execute_plan),
         BusinessBinding(effects.FAMILY, 'UNIT_NETWORK', effects.TARGET_KINDS,
-            'D1/E1 only: either direction of direct or spillover contrasts averaged under the original conditional design; explicit fixed evaluation population and synthetic research reviews.',
+            'D1-D6/E1-E5 within native contracts: either direction of direct or spillover contrasts averaged under the original conditional design; explicit fixed evaluation population and synthetic research reviews.',
             (MethodBinding(effects.METHOD,(effects.METHOD,),
                 (identify_randomized_network_batch,network.identify_network_business_query,identify_verified_linear_target),
                 (network.replay_verified_business_outcome,replay_verified_composition)),),

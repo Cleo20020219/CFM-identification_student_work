@@ -70,6 +70,9 @@ def fact_reference(entry,data):
     if 'value' in sf:sf['value']=adopt
     else:sf['status']='PROPOSED' if adopt is True else 'UNDECIDED' if adopt is None else 'NOT_ADOPTED'
     sf.update(scope='ALL_BINARY_ASSIGNMENTS' if adopt is True else 'UNKNOWN',covered_nodes=data['population'] if adopt is True else [])
+    if entry.get('network_fact_contract') in ('network-policy-record-definitions-1','network-policy-scopes-1','network-policy-scopes-2'):
+        # Hand-authored reference follows the changed scope; never applied to LLM output.
+        sf['definition_refs']=['study'] if sf['covered_nodes'] else []
     info=raw['information'][0];info.update(outcome_nodes=data['population'],signature_cells=[])
     if data['information']=='signature':info.update(operator='NODE_SIGNATURE_MEANS',signature_cells=data['cells'])
     raw['target']['shared_outcome_and_context']['source_ids']=ids('study')

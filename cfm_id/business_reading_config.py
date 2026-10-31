@@ -4,7 +4,7 @@ Defaults match business_intake.start. This object initializes a new intake;
 it does not rewrite historical checkpoints or migrate existing approvals.
 """
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator, model_serializer
 from cfm_id_llm.assignment_semantics import Profile as AssignmentProfile
 from cfm_id_llm.target_summary_contract import Profile as TargetSummaryProfile
 from cfm_id_llm.compact_reference_contract import Profile as A0ReferenceProfile
@@ -25,9 +25,18 @@ class ReadingConfig(BaseModel):
     a0_reference_contract: A0ReferenceProfile = None
     a0_response_contract: A0ResponseProfile = None
     network_fact_contract: NetworkFactProfile = None
+    material_handoff: Literal['information-inventory-1'] | None = None
+
+    @model_serializer(mode='wrap')
+    def historical_options(self, handler):
+        result = handler(self)
+        if result.get('material_handoff') is None:result.pop('material_handoff',None)
+        return result
 
     @model_validator(mode='after')
     def compatible_options(self):
+        if self.material_handoff and (self.reading_format!='compact' or self.fact_format!='short_refs'):
+            raise ValueError('MATERIAL_HANDOFF_REQUIRES_COMPACT_AND_SHORT_REFS')
         if self.a0_response_contract in (*UNIFIED_PROFILES, *LOCAL_COMPARISON_PROFILES) and self.target_summary_contract not in (None,'target-summary-3'):
             raise ValueError('UNIFIED_CONTRACT_REQUIRES_CURRENT_TARGET_SEMANTICS')
         if self.reading_format != 'compact' and any(v is not None for v in (
