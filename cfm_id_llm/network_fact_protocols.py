@@ -1,0 +1,80 @@
+"""Closed request/parser pairs for network facts, not identification routes.
+
+Only developer-selected wire contracts live here. No arbitrary import paths,
+source rewriting, scientific permissions or mathematical dispatch.
+"""
+from dataclasses import dataclass
+from functools import lru_cache
+from types import MappingProxyType
+from typing import Callable, Literal
+
+NetworkFactProfile = Literal[
+    'network-source-statements-1', 'network-source-selections-1',
+    'network-source-selections-a4-1', 'network-source-selections-roles-1',
+    'network-source-selections-information-1', 'network-source-selections-information-2', 'network-source-selections-information-3', 'network-source-selections-information-4',
+    'network-source-selections-outcome-1',
+    'network-source-selections-remainder-1',
+    'network-source-selections-dependencies-1',
+    'network-source-selections-alignment-1',
+    'network-policy-definition-refs-1',
+] | None
+
+
+@dataclass(frozen=True)
+class NetworkFactProtocol:
+    make_request: Callable
+    parse: Callable
+    model: type
+    wire_version: str
+    field_constraints: Callable | None = None
+    request_field_constraints: Callable | None = None
+
+    def public_constraints(self, paths, *, request):
+        """Public reread guidance, paired with this profile's original request."""
+        if self.request_field_constraints is not None:
+            return self.request_field_constraints(paths, request=request)
+        return self.field_constraints(paths) if self.field_constraints is not None else []
+
+
+@lru_cache(maxsize=1)
+def _protocols():
+    from . import network_policy_reading as legacy
+    from . import network_statement_reading as statements
+    from . import network_reading_contract as roles
+    from . import network_information_contract as information
+    from . import network_model_scope_contract as model_scope
+    from . import network_field_contract as field_contract
+    from . import network_outcome_contract as outcome_contract
+    from . import network_remainder_contract as remainder_contract
+    from . import network_source_dependencies as dependencies
+    from . import reading_alignment_contract as alignment
+    from . import policy_evidence_dependencies as explicit
+    return MappingProxyType({
+        None: NetworkFactProtocol(legacy.make_request, legacy.parse, legacy.NetworkPolicyReading, legacy.VERSION),
+        statements.VERSION: NetworkFactProtocol(statements.make_request, statements.parse, statements.StatementReading, statements.VERSION),
+        statements.SELECTION_VERSION: NetworkFactProtocol(statements.make_selection_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION),
+        statements.INFORMATION_SCOPE_CONTRACT: NetworkFactProtocol(statements.make_information_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION),
+        roles.CONTRACT: NetworkFactProtocol(roles.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION),
+        information.CONTRACT: NetworkFactProtocol(information.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION),
+        model_scope.CONTRACT: NetworkFactProtocol(model_scope.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION),
+        model_scope.LOCAL_CONTRACT: NetworkFactProtocol(model_scope.make_local_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION),
+        field_contract.CONTRACT: NetworkFactProtocol(field_contract.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,field_contract.field_constraints),
+        outcome_contract.CONTRACT: NetworkFactProtocol(outcome_contract.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,outcome_contract.field_constraints),
+        remainder_contract.CONTRACT: NetworkFactProtocol(remainder_contract.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,remainder_contract.field_constraints),
+        alignment.NETWORK_CONTRACT: NetworkFactProtocol(alignment.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,request_field_constraints=alignment.field_constraints),
+        dependencies.CONTRACT: NetworkFactProtocol(dependencies.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,request_field_constraints=dependencies.field_constraints),
+        explicit.CONTRACT: NetworkFactProtocol(explicit.make_request, explicit.parse, explicit.Reading, explicit.CONTRACT,request_field_constraints=explicit.field_constraints),
+    })
+
+
+def network_fact_profiles():
+    return tuple(_protocols())
+
+
+def network_fact_protocol(profile: NetworkFactProfile):
+    if profile is not None and type(profile) is not str:
+        raise ValueError('UNKNOWN_NETWORK_FACT_CONTRACT')
+    try:
+        return _protocols()[profile]
+    except KeyError:
+        raise ValueError('UNKNOWN_NETWORK_FACT_CONTRACT') from None

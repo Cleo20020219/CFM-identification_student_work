@@ -1,281 +1,77 @@
-# CFM-identification
+# Causal-IDFM · Identification
 
-本仓库是 **CFM 项目的 Identification 组件仓库**。当前开发重点不是同时维护
-Estimation 与 Policy，而是把 population-level causal identification 做成一个稳定、可扩展、
-可验证的独立模块，并通过一个共享的 ER300 demo 验证它能够正确向下游 Estimation / Policy
-交付结果。
-
-当前核心链路是：
+从业务问题和材料，到经审核的因果识别结果。LLM 提出读取草稿；研究者确认目标、可用总体信息和科学条件；数学模块检查适用域、应用定理并独立重放证书。用户不需要先选择数学方法。
 
 ```text
-Formalized study specification
-        ↓
-TaskSpec + identification_spec
-        ↓
-assumptions + query-specific support
-        ↓
-theorem-backed Identification
-        ↓
-IdentificationResult
-        ↓
-Estimation handoff
+业务材料 → A0 草稿 → 业务意图与来源审核 → 专门事实读取
+                                              ↓
+逐问和整题结果 ← 独立证书重放 ← 数学执行 ← A4 信息 / A5 条件审核
 ```
 
-> **重要：** 仓库中保留部分 Estimation / Policy 源码，仅为了让共享的全链路 demo 和
-> compatibility smoke test 可以运行。它们不是本仓库的主要开发对象，也不代表
-> Estimation / Policy 在这里共同维护。
+读错后显式复查；缺条件时追问；方法未覆盖时报告覆盖缺口。未验证的 LLM 候选不能替代正式结论。当前是**需要审核的研究框架**，业务首读准确率仍有不足。
 
-## 1. 当前 Identification baseline
+## 仓库与起点
 
-当前稳定 baseline 是 randomized-network POINT Identification。代码围绕一个已知、处理前固定的
-unit-level network，显式 treatment assignment design、exposure rule、causal target、assumptions
-与 support 进行验证。
+这是独立的 [CFM-identification](https://github.com/zzyyLOGIC/CFM-identification) 仓库。clone 后直接在仓库根目录安装、运行和开发，无需进入 `research/identification/causal_idfm/` 子目录。负责人仍在原团队工作区维护，再将经过核对的代码同步到这里；详见[仓库布局与同步规则](docs/REPOSITORY_LAYOUT_ZH.md)。旧 ProjectCode 和原交接包不是开发起点。证书内部摘要保留，用于检查材料和审核的一致性。
 
-当前 ER300 路线的核心目标是 design-standardized four-arm means。对节点 `i`，固定自身处理
-`t`，让其他节点按照实验设计随机化，并在 exposure 状态为 `s` 的随机化情形中平均其潜在结果：
+新应用统一使用 [`cfm_id.project`](cfm_id/project.py)，读取唯一推荐配置 [`cfm_id/configuration/reading.json`](cfm_id/configuration/reading.json)。这是从已有合同中选定的教学起点，没有修改 Prompt，也不声称它的准确率最优。旧默认值和旧协议只为兼容保留，见[配置指南](docs/BUSINESS_READING_CONFIG_ZH.md)。
 
-```text
-mu_i(t,s) = E_design[ Y_i(t, T_-i) | S_i(t,T_-i)=s, pretreatment context ]
-```
+## 安装，运行三个完整示例
 
-在当前已支持的 randomized-network setting 中，只有在必要 assumptions 被明确承认且目标 arm
-具有 population support 时，Identification 才生成可执行的 Estimation handoff。未知或未解决的
-assumptions 不会被自动当作 PARTIAL。
+Python 3.11 或更新版本。在本目录执行：
 
-当前实现细节以代码为准，主要入口是：
-
-- `pfn_pipeline/identification.py`
-- `pfn_pipeline/_internal/identification/`
-- `pfn_pipeline/contracts.py`
-- `tests/test_identification_integration.py`
-
-> **接口命名说明：** 设计讨论中我们有时把统一语义层称作“CausalTaskSpec”，但当前代码中
-> **不存在名为 `CausalTaskSpec` 的类**。公共 runtime contract 是 `TaskSpec`，其中携带
-> `identification_spec`；后者会被验证为内部严格的 `IdentificationSpec`。详见
-> [`docs/IDENTIFICATION_INTERFACE.md`](docs/IDENTIFICATION_INTERFACE.md)。
-
-## 2. Repository scope
-
-### Identification-owned code（主要开发区域）
-
-```text
-pfn_pipeline/identification.py
-pfn_pipeline/_internal/identification/
-tests/test_identification_integration.py
-```
-
-`pfn_pipeline/contracts.py` 是 Identification 与下游共用的 contract。可以修改，但 PR 必须说明
-为什么该修改是必要的、是否保持 backward compatibility、以及会怎样影响 Estimation handoff。
-
-### Integration-only downstream snapshot
-
-下面这些模块保留在仓库中，是为了运行共享 demo / smoke test：
-
-```text
-pfn_pipeline/estimation.py
-pfn_pipeline/policy.py
-pfn_pipeline/pfn.py
-pfn_pipeline/simulation.py
-pfn_pipeline/evaluation.py
-pfn_pipeline/visualization.py
-pfn_pipeline/_internal/estimation/
-pfn_pipeline/_internal/policy/
-```
-
-除非任务明确要求修复 Identification 与下游的接口兼容性，否则学生 PR 不应修改这些路径。
-一般性的 Estimation / Policy feature development 应在对应项目中完成。
-
-更详细的 ownership 与 merge 规则见 [`REPO_SCOPE.md`](REPO_SCOPE.md)。
-
-## 3. Repository layout
-
-```text
-.
-├── pfn_pipeline/
-│   ├── identification.py                 # public Identification entry point
-│   ├── contracts.py                      # shared TaskSpec / result contracts
-│   ├── _internal/identification/         # theorem / verifier / handoff implementation
-│   ├── _internal/estimation/             # integration snapshot
-│   └── _internal/policy/                 # integration snapshot
-│
-├── notebooks/
-│   ├── Shared_ER_Identification_Estimation_Policy_Demo.ipynb
-│   ├── er300_tutorial_helpers.py
-│   └── shared_er_demo_helpers.py
-│
-├── examples/
-│   └── run_pipeline.py                   # code-based integration demo
-│
-├── tests/
-│   ├── test_identification_integration.py
-│   └── test_pipeline_smoke.py
-│
-├── student_work/                         # Task-1 review workspace; not automatically merged
-├── tools/run_student_tests.py            # run each student task's tests independently
-├── REPO_SCOPE.md
-├── CONTRIBUTING.md
-├── .github/
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   └── workflows/ci.yml                   # PR regression checks
-├── docs/
-│   ├── IDENTIFICATION_INTERFACE.md
-│   └── student_tasks/
-└── requirements.txt
-```
-
-## 4. Installation
-
-建议使用 Python 3.10+。在仓库根目录：
-
-```bash
+```powershell
 python -m venv .venv
+.venv\Scripts\python -m pip install -e .
+.venv\Scripts\python -m cfm_id.project config
+.venv\Scripts\python -m examples.student_handoff --allow-synthetic-reviews --output outputs/first_run
 ```
 
-激活环境后：
+Linux/macOS 将 `.venv\Scripts\python` 换成 `.venv/bin/python`。输出目录必须是新目录。以上**不联网调用模型、不需要 API Key、不需要 Torch**。
 
-```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
+| 示例 | 业务目标与条件 | 实际输出 |
+|---|---|---|
+| `point` | 服务网点采用同一 AI 安排时的平均结果；已声明完整总体信息和所需科学条件 | `POINT`，识别表达式、证书、独立重放 |
+| `partial` | 合作网络中一个固定推广方案的平均结果；有限总体均值和完整有界模型 | `PARTIAL`，相对该模型的 sharp 界 `[3/7, 4/7]`，证书、独立重放 |
+| `missing_condition` | 与 PARTIAL 同类目标，但模型完整性条件未确认 | `NEEDS_INPUT`，列明缺项，不调用求解器 |
 
-本仓库不跟踪训练 checkpoint；`checkpoints/` 被 `.gitignore` 排除。
+每个目录保存业务原文、两次读取请求与固定草稿、合成审核、计划、逐问结果及整题结果。**草稿是教学夹具，审核是显式合成审核，不是实时 LLM 结果或真实企业批准。** 源码见 [`examples/student_handoff.py`](examples/student_handoff.py)。
 
-## 5. 先验证 Identification
-
-第一次 clone 后，建议先只运行 Identification regression tests：
-
-```bash
-python -B -m unittest discover -s tests -p "test_identification_integration.py" -v
-```
-
-这组测试直接检查当前 Identification route、assumption 状态、support / handoff 以及跨网络兼容性。
-
-如果还希望检查 Identification → Estimation → Policy 的接口没有被破坏，可以运行：
-
-```bash
-python -B -m unittest discover -s tests -p "test_pipeline_smoke.py" -v
-```
-
-`test_pipeline_smoke.py` 会在临时目录训练一个极小模型，仅用于验证 plumbing / contract
-compatibility，不用于评估正式 Estimation 性能。
-
-## 6. Shared ER300 end-to-end demo
-
-展示 notebook：
-
-```text
-notebooks/Shared_ER_Identification_Estimation_Policy_Demo.ipynb
-```
-
-它展示：
-
-```text
-Task / network experiment
-→ Identification
-→ Estimation
-→ Policy
-```
-
-Notebook 已保存使用预训练权重运行后的图表和中间结果，可直接阅读。默认模式为：
+真实业务创建会话：
 
 ```python
-MODE = "checkpoint"
+from cfm_id import project
+from cfm_id.business_intake import prepare_request
+session = project.start(case)   # case 是含问题和材料的 BusinessCase / dict
+request = prepare_request(session)  # 只准备请求；不调用模型、不自动审核
 ```
 
-本次展示沿用预训练权重对应的固定 ER300 网络（连边概率 0.02、905 条边）和数据生成设置。
-权重不进入 Git；重新 `Run All` 前，需要将匹配的 `model_best.pt` 放到
-`checkpoints/er_estimation_demo/`，或通过 `CHECKPOINT` / 环境变量 `CAUSALCFM_CHECKPOINT`
-指定权重路径。阅读已保存的结果不需要本地权重。
+也可执行 `python -m cfm_id.project start --input case.json --output outputs/new_case`。后续接收回答、逐项审核、分派与执行见[会话操作](docs/BUSINESS_INTAKE_ZH.md)和[业务分派](docs/BUSINESS_DISPATCH_ZH.md)。
 
-没有预训练权重时，可选择 `MODE = "dense_smoke"` 验证流程。该模式使用另一张连边概率 0.5
-的固定 ER300 图，现场训练极小模型（2 个训练任务、1 个 epoch），再完成估计与决策。
-它仅用于接口检查，不能复现本次预训练展示的数值，也不代表正式模型精度。
-Estimation 源码仍保留在 `pfn_pipeline/estimation.py`、`pfn_pipeline/pfn.py` 和
-`pfn_pipeline/_internal/estimation/`。运行产生的 `outputs/` 不进入 Git。
+## 开发阅读顺序
 
-> Notebook 中的 Estimation / Policy 结果是 integration demonstration；Identification 的数学
-> 正确性仍由 theorem-backed code 与 tests 负责，而不是由 PFN 输出决定。
+分类的综述/定理依据与项目自定义边界见[分类与文献依据](literature_support/CLASSIFICATION_ZH.md)。开发文档只说明当前能力与扩展接口，不包含内部人员分工。
 
-## 7. Pull Request 自动检查
+1. [目录与代码地图](docs/DEVELOPMENT_ENTRY_ZH.md)：每个文件夹的职责，哪些文件属于数学 Core。
+2. [读取配置](docs/BUSINESS_READING_CONFIG_ZH.md)：推荐起点、兼容默认和实验的边界。
+3. [新增能力规则](docs/EXTENSION_MAINTENANCE_ZH.md)：能力登记、读取登记、原生证明和验收义务。
+4. [当前范围](docs/CURRENT_SCOPE_ZH.md)、[数学与文献导航](docs/MATH_AND_EVIDENCE_ZH.md)：原生能力与自然语言接入并非同一范围。
+5. [本次交接验收](docs/DELIVERY_READINESS_ZH.md)、[未解决项](docs/KNOWN_LIMITATIONS_ZH.md)。
 
-`.github/workflows/ci.yml` 会在 Pull Request 和 `main` push 时自动运行：
+五类当前短引用读取家族已共用[读取组件登记](docs/FACT_READING_REGISTRY_ZH.md)：固定政策均值、两政策差值、局部效应、R3 观察性政策、变量 DAG。它们仍各自保持目标与科学审核，登记不是数学求解器，也不会自动批准条件。
 
-```text
-Identification regression tests
-+ end-to-end compatibility smoke tests
-+ student_work/taskXX/test_*.py
+## 修改后的检查
+
+```powershell
+python -m pip install -e ".[test,documents]"
+python scripts/check_framework.py --suite quick --output outputs/quick_check
+python scripts/check_framework.py --suite chain --output outputs/chain_check
+python scripts/check_framework.py --suite full --output outputs/full_check
+python scripts/check_offline.py
 ```
 
-学生任务测试通过 `python -B tools/run_student_tests.py` 逐个任务运行。没有任务目录时跳过；
-已有任务目录缺少测试、未收集到测试或测试失败时，CI 失败。CI 不执行完整展示 notebook；
-原有 compatibility smoke test 仍会在临时目录训练极小模型。
+按改动范围选层级，具体见[测试职责](docs/TESTING_ZH.md)。`[test]` 中的 Torch 用于历史兼容夹具；三个入门示例无需它。离线检查不能替代真实 LLM 准确率测量。
 
-`main` 已启用分支保护：PR 必须获得代码负责人批准、通过 GitHub Actions 的 `tests` 检查、
-与最新主分支同步并解决审核对话后才能合并。新代码提交后需要重新批准；禁止学生强制推送和删除主分支。
-管理员保留绕过保护的权限，自己的改动无需他人批准。具体流程见 `CONTRIBUTING.md`。
-CI 只检查代码与接口回归，不替代 theorem / assumptions 的人工 review。
+## 历史内容
 
-## 8. Student contribution workflow
-
-本仓库使用：
-
-```text
-Issue / assigned task
-    ↓
-branch from frozen baseline
-    ↓
-development + local tests
-    ↓
-Draft Pull Request
-    ↓
-review
-    ├── request changes
-    ├── approve + merge
-    └── review complete + close without merge
-```
-
-学生不得直接 push `main`。第一次任务主要用于熟悉 Identification 与协作流程，因此
-**完成任务不等于 PR 一定进入 main**。只有数学正确、测试充分、并且对共享 Identification
-代码具有复用价值的修改才会 merge。
-
-第一轮任务推荐把独立的学习/验证产物放在：
-
-```text
-student_work/taskXX/
-```
-
-如果任务确实发现了需要进入共享实现的通用抽象，再在同一个 PR 中明确说明为什么要修改
-Identification core。
-
-完整流程见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
-正式任务书已在群内发布；仓库中的 `docs/student_tasks/` 仅保留任务索引与提交位置。
-
-## 9. 建议的 GitHub 初始化方式
-
-整理好的目录可以直接执行：
-
-```bash
-git init
-git add .
-git commit -m "Initialize CFM-identification baseline"
-git branch -M main
-git remote add origin <YOUR_GITHUB_REPOSITORY_URL>
-git push -u origin main
-```
-
-然后冻结第一轮学生共同起点：
-
-```bash
-git tag student-task1-baseline
-git push origin student-task1-baseline
-```
-
-建议在 GitHub 的 `main` branch protection 中至少启用：
-
-- Require a pull request before merging
-- Require at least 1 approval
-- Require status checks before merging（有 CI 后启用）
-- Block force pushes
-- Block deletion
-
-维护者建议使用 **Squash and merge**，避免把学生调试过程中的大量小 commit 带入 `main`。
+当前操作指南在 `docs/`。内部任务安排、分轮实验日志和旧发布记录不随本仓库分发。`examples/legacy/` 中保留必要的冻结兼容夹具，其中两份模型回答只用于离线回放。大批在线输入输出仍保存在源码外，不随此包交付。`predevelopment/`、`research_partial/` 是保留旧导入的原型，正式 PARTIAL 位置见代码地图。协议内部标识不随文件整理更名，以保持请求、审核和证书兼容。
