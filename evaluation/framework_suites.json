@@ -79,7 +79,8 @@
         "tests_gateway/test_policy_interface_contracts.py",
         "tests_gateway/test_reading_material_handoff.py",
         "tests_gateway/test_policy_stage_ownership.py",
-        "tests_gateway/test_assumption_dependency_contract.py"
+        "tests_gateway/test_assumption_dependency_contract.py",
+        "tests_gateway/test_mean_order_field_contract.py"
       ]
     },
     {
@@ -116,7 +117,8 @@
         "tests_gateway/test_method_diagnostics.py",
         "tests_gateway/test_contrast_method_diagnostics.py",
         "tests_gateway/test_effect_method_diagnostics.py",
-        "tests_gateway/test_observational_method_diagnostics.py"
+        "tests_gateway/test_observational_method_diagnostics.py",
+        "tests_gateway/test_network_mean_order_dispatch.py"
       ]
     },
     {
@@ -177,7 +179,9 @@
         "tests_gateway/test_method_diagnostics.py::test_read_only_entry_uses_native_gates_and_does_not_create_approval",
         "tests_gateway/test_contrast_method_diagnostics.py::test_readonly_public_entry_uses_registry_and_actual_pair_reviews",
         "tests_gateway/test_effect_method_diagnostics.py::test_readonly_entry_and_saved_evidence_never_invoke_a_backend",
-        "tests_gateway/test_observational_method_diagnostics.py::test_readonly_entry_uses_existing_gates_without_reexecuting_or_granting_permission"
+        "tests_gateway/test_observational_method_diagnostics.py::test_readonly_entry_uses_existing_gates_without_reexecuting_or_granting_permission",
+        "tests_gateway/test_network_mean_order_dispatch.py::test_extension_is_source_reviewable_and_legacy_profiles_remain_strict",
+        "tests_gateway/test_mean_order_field_contract.py::test_not_assumed_schema_parser_and_diagnostic_agree"
       ]
     },
     "chain": {
@@ -214,7 +218,9 @@
         "tests_gateway/test_method_diagnostics.py",
         "tests_gateway/test_contrast_method_diagnostics.py",
         "tests_gateway/test_effect_method_diagnostics.py",
-        "tests_gateway/test_observational_method_diagnostics.py"
+        "tests_gateway/test_observational_method_diagnostics.py",
+        "tests_gateway/test_network_mean_order_dispatch.py",
+        "tests_gateway/test_mean_order_field_contract.py"
       ]
     }
   }

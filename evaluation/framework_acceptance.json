@@ -118,7 +118,9 @@
     "tests_gateway/test_method_diagnostics.py",
     "tests_gateway/test_contrast_method_diagnostics.py",
     "tests_gateway/test_effect_method_diagnostics.py",
-    "tests_gateway/test_observational_method_diagnostics.py"
+    "tests_gateway/test_observational_method_diagnostics.py",
+    "tests_gateway/test_network_mean_order_dispatch.py",
+    "tests_gateway/test_mean_order_field_contract.py"
   ],
   "common_obligations": [
     {
@@ -2779,6 +2781,41 @@
         "tests_gateway/test_observational_method_diagnostics.py::test_inconsistent_saved_evidence_is_not_shown_as_replayed[replay]",
         "tests_gateway/test_observational_method_diagnostics.py::test_inconsistent_saved_evidence_is_not_shown_as_replayed[blocked]",
         "tests_gateway/test_observational_method_diagnostics.py::test_failed_native_replay_keeps_attempt_but_never_reports_verified_support"
+      ]
+    },
+    {
+      "id": "MEAN_ORDER_COMMON_ENTRY",
+      "title": "Existing mean-order comparison: source-bound common entry, axis review, assumption ladder and independent replay",
+      "nodes": [
+        "tests_gateway/test_network_mean_order_dispatch.py::test_same_target_a4_and_bounds_assumption_ladder_and_native_replay",
+        "tests_gateway/test_network_mean_order_dispatch.py::test_new_assumptions_and_reverse_direction_cannot_reuse_old_reviews",
+        "tests_gateway/test_network_mean_order_dispatch.py::test_incompatible_model_has_farkas_replay_and_no_interval",
+        "tests_gateway/test_network_mean_order_dispatch.py::test_missing_supported_a4_is_not_filled_by_order_constraints",
+        "tests_gateway/test_network_mean_order_dispatch.py::test_recheck_keeps_order_fields_and_invalidates_sources_and_science",
+        "tests_gateway/test_network_mean_order_dispatch.py::test_each_review_layer_remains_required[REJECTED-science_axis]",
+        "tests_gateway/test_network_mean_order_dispatch.py::test_native_certificate_or_problem_tampering_never_reports_success[dual]",
+        "tests_gateway/test_network_mean_order_dispatch.py::test_extension_is_source_reviewable_and_legacy_profiles_remain_strict"
+      ]
+    },
+    {
+      "id": "MEAN_ORDER_READING_PARITY",
+      "title": "Public/local schema parity; undecided, not adopted and extra restrictions; independent source review and unchanged raw replies",
+      "nodes": [
+        "tests_gateway/test_mean_order_field_contract.py::test_not_assumed_schema_parser_and_diagnostic_agree[None-None]",
+        "tests_gateway/test_mean_order_field_contract.py::test_not_assumed_schema_parser_and_diagnostic_agree[CONDITIONAL_MEAN-None]",
+        "tests_gateway/test_mean_order_field_contract.py::test_not_assumed_schema_parser_and_diagnostic_agree[None-ALL_BINARY_ASSIGNMENTS]",
+        "tests_gateway/test_mean_order_field_contract.py::test_not_assumed_schema_parser_and_diagnostic_agree[UNKNOWN-UNKNOWN]",
+        "tests_gateway/test_mean_order_field_contract.py::test_readings_keep_distinct_admission_meanings[undecided-NEEDS_INPUT]",
+        "tests_gateway/test_mean_order_field_contract.py::test_readings_keep_distinct_admission_meanings[not_assumed-REVIEW_REQUIRED]",
+        "tests_gateway/test_mean_order_field_contract.py::test_readings_keep_distinct_admission_meanings[unmentioned-NEEDS_INPUT]",
+        "tests_gateway/test_mean_order_field_contract.py::test_readings_keep_distinct_admission_meanings[extra_constraint-ADAPTER_NOT_CONNECTED]",
+        "tests_gateway/test_mean_order_field_contract.py::test_readings_keep_distinct_admission_meanings[unknown_completeness-NEEDS_INPUT]",
+        "tests_gateway/test_mean_order_field_contract.py::test_readings_keep_distinct_admission_meanings[no_effect-ADAPTER_NOT_CONNECTED]",
+        "tests_gateway/test_mean_order_field_contract.py::test_schema_roles_reappear_in_source_review_and_explicit_recheck",
+        "tests_gateway/test_mean_order_field_contract.py::test_roster_dependencies_cover_scalar_bounds_and_covered_nodes_without_inheritance",
+        "tests_gateway/test_mean_order_field_contract.py::test_legacy_wires_and_system_prompt_unchanged_and_no_order_defaults",
+        "tests_gateway/test_mean_order_field_contract.py::test_reviewed_reading_errors_stop_without_repairing_the_candidate[definition_citation]",
+        "tests_gateway/test_mean_order_field_contract.py::test_reviewed_reading_errors_stop_without_repairing_the_candidate[duplicate_order]"
       ]
     }
   ]

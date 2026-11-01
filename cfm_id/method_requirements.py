@@ -6,6 +6,7 @@ native adapter's worksheets/constants. Unknown keys remain visible, not accepted
 from . import capability_registry as capabilities
 from . import network_policy_dispatch as policy, network_bounded_dispatch as bounded
 from . import network_contrast_dispatch as contrast
+from . import network_mean_order_dispatch as orders
 from . import network_effect_dispatch as effects
 from . import network_observational_policy_dispatch as observational
 from cfm_id_llm.network_design_reading import D6_CONDITION
@@ -44,6 +45,8 @@ LABELS = {
     bounded.MODEL_DECISIONS[3]: '全部模型对象、所有完整安排的均值充分性',
     contrast.PAIR_DECISIONS[0]: '两个完整政策及第一政策减第二政策的方向',
     contrast.PAIR_DECISIONS[1]: '共同评价名单、等权平均、结果定义和研究背景',
+    orders.ORDER_DECISIONS[0]: '除已声明均值顺序、基础条件和界限外没有其他限制',
+    orders.ORDER_DECISIONS[1]: '顺序针对同一数值结果的条件均值；轴、全部安排范围及假设依据明确',
     effects.READING_DECISIONS[0]: '自身与同伴的两个局部状态，以及第一端减第二端的方向',
     effects.READING_DECISIONS[1]: '抽签前固定的评价名单及权重',
     effects.READING_DECISIONS[2]: '其余安排在各端局部条件下按原设计概率平均',
@@ -54,6 +57,10 @@ LABELS = {
 
 
 def condition_label(key):
+    if key.startswith('mean_order_axis:'):
+        import json
+        node, axis = json.loads(key.split(':',1)[1])
+        return str(node) + ('：本人' if axis=='OWN' else '：同伴') + '均值非减条件的采用或明确不采用'
     if key.startswith('a4_source_'):
         return '该方法使用的总体信息：' + key
     return LABELS.get(key, key)
@@ -89,6 +96,10 @@ def catalog(family=FAMILY):
                                  (*contrast.PAIR_DECISIONS, *policy.BASE_CONDITIONS, *bounded.MODEL_DECISIONS),
                                  '共同有限模型、完整信息与约束；直接对有向差值联合求界并重放',
                                  '当前 D2/E1 完整均值模型；不相减独立端点区间，抵消可使差值为 POINT。'),
+        orders.METHOD: ('均值顺序模型中的联合政策差值界限',
+                        (*contrast.PAIR_DECISIONS, *policy.BASE_CONDITIONS, *orders.model_decisions([])),
+                        '在同一有限模型中直接求差值；独立重放可达端点、最优性或不可行证书',
+                        '现有 D2/E1、至多12个对象；逐对象本人/同伴均值非减或明确不假定。sharp仅相对于审核后的完整模型。'),
         effects.METHOD: ('原设计条件平均的局部直接／同伴效应 R1a',
                          (*effects.READING_DECISIONS, *effects.SCIENCE_DECISIONS),
                          '全部非零局部状态的原设计正支持、同一A4来源覆盖和有向组合证书重放',

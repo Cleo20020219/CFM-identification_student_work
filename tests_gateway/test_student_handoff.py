@@ -14,7 +14,7 @@ def test_recommended_entry_uses_one_config_without_changing_legacy_defaults(monk
     case = student_handoff.material('point')
     config = project.reading_config()
     assert config.a0_response_contract == 'query-conditioning-1'
-    assert config.network_fact_contract == 'network-source-selections-alignment-1'
+    assert config.network_fact_contract == 'network-source-selections-mean-orders-1'
     assert ReadingConfig().a0_response_contract is None
     current = project.start(case)
     explicit = business_intake.start_configured(case, config)

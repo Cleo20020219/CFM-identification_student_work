@@ -39,7 +39,7 @@ shared_outcome_and_context仅记录原文是否明确两端使用相同结果定
 # profile when the lifecycle registry visits all profiles, rather than evicting
 # and recreating classes across source review, parsing and diagnostics.
 @lru_cache(maxsize=None)
-def reading_model(profile=None):
+def _base_reading_model(profile=None):
     protocol = network_fact_protocol(profile)
     from . import policy_evidence_dependencies as explicit, policy_record_definitions as records, policy_scope_reading as scopes
     from . import policy_assumption_dependencies as assumptions
@@ -49,7 +49,7 @@ def reading_model(profile=None):
         version=(Literal[VERSION], ...), target=(target, ...))
 
 
-def make_request(bundle, *, binding, assignment_semantics=None, profile=None):
+def _base_make_request(bundle, *, binding, assignment_semantics=None, profile=None):
     from . import policy_assumption_dependencies as assumptions
     if profile == assumptions.CONTRACT:
         return assumptions.make_contrast_request(bundle,binding=binding,assignment_semantics=assignment_semantics)
@@ -93,7 +93,7 @@ def make_request(bundle, *, binding, assignment_semantics=None, profile=None):
     return dependencies.apply(result) if profile == dependencies.CONTRACT else result
 
 
-def parse(bundle, raw, *, binding, profile=None):
+def _base_parse(bundle, raw, *, binding, profile=None):
     from . import policy_assumption_dependencies as assumptions
     if profile == assumptions.CONTRACT:
         return assumptions.parse_contrast(bundle,raw,binding=binding)
@@ -123,3 +123,40 @@ def parse(bundle, raw, *, binding, profile=None):
         decoded[side] = protocol.parse(bundle, candidate, binding=binding)
     return dict(target=target, endpoint_candidates=projections, endpoint_readings=decoded,
                 projection='Two target projections with identical common source/model declarations; no scientific approval.')
+
+
+@lru_cache(maxsize=None)
+def reading_model(profile=None):
+    from .network_mean_order_reading import NetworkMeanOrderModel, field, PROFILE
+    if profile != PROFILE:
+        return _base_reading_model(profile)
+    return create_model('NetworkPolicyContrastWithOrders', __base__=_base_reading_model(profile),
+                        mean_order_model=(NetworkMeanOrderModel | None, field()))
+
+
+def make_request(bundle, *, binding, assignment_semantics=None, profile=None):
+    from .network_mean_order_reading import extend_request, PROFILE
+    request = _base_make_request(bundle, binding=binding,
+        assignment_semantics=assignment_semantics, profile=profile)
+    return extend_request(request) if profile == PROFILE else request
+
+
+def field_constraints(paths, *, request, profile=None):
+    rows = network_fact_protocol(profile).public_constraints(paths, request=request)
+    from .network_mean_order_reading import PROFILE
+    if profile == PROFILE:
+        from .mean_order_field_contract import field_constraints as order_constraints
+        rows += order_constraints(paths, request=request)
+    return rows
+
+
+def parse(bundle, raw, *, binding, profile=None):
+    from .network_mean_order_reading import NetworkMeanOrderModel, PROFILE
+    candidate = deepcopy(raw)
+    orders = candidate.pop('mean_order_model', None) if profile == PROFILE else None
+    result = _base_parse(bundle, candidate, binding=binding, profile=profile)
+    if orders is not None:
+        value = NetworkMeanOrderModel.model_validate(orders)
+        refs = reference_catalog(bundle, binding=binding)
+        result['mean_order_model'] = expand(value.model_dump(), refs)
+    return result

@@ -45,6 +45,7 @@ def business_bindings():
     from .workflows import policy_difference
     from . import bounded_policy_solver, bounded_policy_verify
     from . import bounded_contrast_solver, bounded_contrast_verify, fixed_comparison
+    from . import network_mean_order_dispatch as order, mean_order_solver, mean_order_verify
     from pfn_pipeline import identification_policy_r1b as r1b, identification_policy_r2 as r2
     from pfn_pipeline import identification_business as network
     from pfn_pipeline.identification_batch import identify_randomized_network_batch
@@ -66,7 +67,9 @@ def business_bindings():
                 (network.identify_network_business_query, policy_difference.compose),
                 (network.replay_verified_business_outcome, policy_difference.replay)),
              MethodBinding(contrast.BOUNDED_METHOD, (contrast.BOUNDED_METHOD,),
-                (bounded_contrast_solver.solve,), (bounded_contrast_verify.replay,))),
+                (bounded_contrast_solver.solve,), (bounded_contrast_verify.replay,)),
+             MethodBinding(order.METHOD, (order.METHOD,),
+                (mean_order_solver.solve,), (mean_order_verify.replay,))),
             contrast.inspect_methods, contrast.native_reviews_from_json, contrast._execute_plan, True),
         BusinessBinding('VARIABLE_DAG_FACTS', 'VARIABLE_DAG', ('INTERVENTIONAL_DISTRIBUTION',),
             'Existing finite variable DAG contracts only; no network/DAG composition.',

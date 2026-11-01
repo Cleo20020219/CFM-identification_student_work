@@ -101,6 +101,11 @@ def _prepare_fields(entry, candidate):
     if mean_ref.startswith('#/$defs/') and '/mean_sufficiency' in rows:
         rules=schema.get('$defs',{}).get(mean_ref.rsplit('/',1)[-1],{}).get('x-cfm-field-contract')
         if rules:rows['/mean_sufficiency']['combination_rules']=deepcopy(rules)
+    if entry.get('network_fact_contract') == 'network-source-selections-mean-orders-1':
+        from cfm_id_llm.mean_order_field_contract import field_constraints
+        for path, row in rows.items():
+            if path.startswith('/mean_order_model'):
+                row['public_field_constraints'] = field_constraints([path], request=entry['request'])
     source_catalog = deepcopy(refs['aliases'])
     identity = dict(version=VERSION,entry=entry,candidate=candidate,fields=rows,
         source_catalog=source_catalog,evidence_rule=EVIDENCE_RULE)

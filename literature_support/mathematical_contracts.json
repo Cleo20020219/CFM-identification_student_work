@@ -176,14 +176,17 @@
       "native_route_ids": [
         "MEAN_ORDER_D2_E1"
       ],
-      "business_method_ids": [],
+      "business_method_ids": [
+        "MEAN_ORDER_D2_E1"
+      ],
       "mathematical_documents": [
         "docs/MEAN_ORDER_RESEARCH_ZH.txt"
       ],
       "implementation_files": [
         "cfm_id/mean_order_contract.py",
         "cfm_id/mean_order_solver.py",
-        "cfm_id/mean_order_verify.py"
+        "cfm_id/mean_order_verify.py",
+        "cfm_id/network_mean_order_dispatch.py"
       ],
       "literature_maps": [
         "literature_support/routes/mean_order_research.json"

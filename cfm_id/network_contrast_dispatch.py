@@ -8,6 +8,7 @@ from .business_dispatch import (sha, worksheet, checked_review, DispatchError,
     empty_result, PLAN_DECISIONS)
 from . import network_policy_dispatch as policy
 from . import network_bounded_dispatch as bounded
+from . import network_mean_order_dispatch as mean_order
 from .bounded_policy_contract import BoundedPolicyUnavailable
 from cfm_id_llm import network_contrast_reading as reading
 from cfm_id_bridge.scientific_binding import sha as native_sha, canonical_data
@@ -50,11 +51,20 @@ def inspect_methods(entry, raw, *, note_review=None):
         a, b = (t[s] for s in SIDES)
         if a['population'] is not None and b['population'] is not None and set(a['population']) != set(b['population']):
             return dict(out, state='ADAPTER_NOT_CONNECTED', reason_code='COMMON_CONTRAST_POPULATION_REQUIRED')
+        order_context = None
+        if 'mean_order_model' in decoded:
+            order_context = mean_order.inspect_reading(entry, decoded)
+            out['mean_order_reading'] = deepcopy(order_context['projection'])
+            if order_context['projection']['state'] != 'REVIEW_REQUIRED':
+                projection = order_context['projection']
+                return dict(out, state=('ADAPTER_NOT_CONNECTED' if projection['state']=='UNSUPPORTED' else projection['state']),
+                    reason_code='MEAN_ORDER_DECLARATIONS_NOT_READY',
+                    clarification_questions=projection['clarification_questions'])
         plans = {}
         for side in SIDES:
             endpoint = dict(entry, comparison_endpoint=side, comparison_candidate_sha256=sha(raw))
             plans[side] = policy.inspect_methods(endpoint, decoded['endpoint_candidates'][side],
-                note_review=None if note_review is None else note_review[side])
+                note_review=None if note_review is None else note_review[side], _mean_order_context=order_context)
         out['endpoint_plans'] = plans
         stops = [p for p in plans.values() if p['state'] != 'REVIEW_REQUIRED' or 'plan_worksheet' not in p]
         if stops:
@@ -68,8 +78,9 @@ def inspect_methods(entry, raw, *, note_review=None):
         for field in ('node_order', 'unit_weights', 'treatment', 'outcome', 'context'):
             if targets['first'][field] != targets['second'][field]:
                 raise ValueError('COMMON_CONTRAST_COORDINATES_REQUIRED')
-        bounded_pair = all(any(r['method'] == bounded.METHOD for r in plans[s]['methods']) for s in SIDES)
-        base_methods = ((bounded.METHOD,) if bounded_pair else tuple(m for m in (policy.R1B,policy.R2)
+        finite_method = mean_order.METHOD if order_context is not None else bounded.METHOD
+        bounded_pair = all(any(r['method'] == finite_method for r in plans[s]['methods']) for s in SIDES)
+        base_methods = ((finite_method,) if bounded_pair else tuple(m for m in (policy.R1B,policy.R2)
             if all(any(r['method']==m for r in plans[s]['methods']) for s in SIDES)))
         if not base_methods:
             return dict(out, state='ADAPTER_NOT_CONNECTED', reason_code='CONTRAST_ENDPOINT_METHOD_COMBINATION_NOT_CONNECTED',
@@ -83,7 +94,8 @@ def inspect_methods(entry, raw, *, note_review=None):
             if (first['source_indices']!=second['source_indices'] or
                     first['science_worksheet']['decisions']!=second['science_worksheet']['decisions']):
                 raise ValueError('COMMON_CONTRAST_REVIEW_SCOPE_REQUIRED')
-            method = {bounded.METHOD:BOUNDED_METHOD,policy.R1B:POINT_METHOD,policy.R2:R2_METHOD}[base_method]
+            method = {bounded.METHOD:BOUNDED_METHOD,mean_order.METHOD:mean_order.METHOD,
+                      policy.R1B:POINT_METHOD,policy.R2:R2_METHOD}[base_method]
             binding = sha(dict(entry=entry, raw=raw, endpoint_plans=plans, target=proposed, method=method))
             out['methods'].append(dict(method=method, source_indices=first['source_indices'],
                 applicability='NOT_CHECKED_BEFORE_SCIENCE_REVIEW',
@@ -97,6 +109,11 @@ def inspect_methods(entry, raw, *, note_review=None):
     except DispatchError as exc:
         return dict(out, state=exc.state, reason_code=exc.reason)
     except (ValueError, TypeError, KeyError, AttributeError, ArithmeticError):
+        from cfm_id_llm.network_mean_order_reading import PROFILE
+        if entry.get('network_fact_contract') == PROFILE:
+            from cfm_id_llm.wire_type_diagnostics import diagnose
+            diagnostics = diagnose(entry, raw)
+            if diagnostics:out['reading_diagnostics'] = diagnostics
         return dict(out, state='CHECK_BLOCKED', reason_code='INVALID_SOURCE_BOUND_NETWORK_CONTRAST_READING')
 
 
@@ -210,12 +227,12 @@ def _execute_plan(plan, *, plan_review=None, native_reviews=None, research_proto
             raise DispatchError('CHECK_BLOCKED', 'DISPATCH_REVIEW_AUTHORITY_MISMATCH')
         if native_reviews is None:
             raise DispatchError('REVIEW_REQUIRED', 'CONTRAST_READING_AND_SCIENCE_REVIEWS_REQUIRED')
-        if not plan['methods'] or (any(r['method']==BOUNDED_METHOD for r in plan['methods']) and len(plan['methods'])!=1):
+        if not plan['methods'] or (any(r['method'] in (BOUNDED_METHOD,mean_order.METHOD) for r in plan['methods']) and len(plan['methods'])!=1):
             raise ValueError('EXACT_JOINT_METHOD_REQUIRED')
         by_method = native_reviews_from_json(plan,native_reviews)
         # Check every planned method before invoking either endpoint backend.
         for row in plan['methods']:
-            if row['method'] not in (POINT_METHOD,R2_METHOD,BOUNDED_METHOD):raise ValueError('UNKNOWN_CONTRAST_METHOD')
+            if row['method'] not in (POINT_METHOD,R2_METHOD,BOUNDED_METHOD,mean_order.METHOD):raise ValueError('UNKNOWN_CONTRAST_METHOD')
             records=by_method[row['method']]
             for key,field in (('reading_review','reading_worksheet'),('science_review','science_worksheet')):
                 record=checked_review(records[key],row[field])
@@ -227,6 +244,8 @@ def _execute_plan(plan, *, plan_review=None, native_reviews=None, research_proto
             return dict(out, state='ADAPTER_NOT_CONNECTED', reason_code='CONTRAST_SYNTHETIC_REVIEW_SCOPE_ONLY')
         results=[]
         for row in plan['methods']:
+            if row['method']==mean_order.METHOD:
+                return mean_order.execute_reviewed(plan,row,by_method[row['method']],review.authority,out)
             inquiries,information=_compile_pair(plan,row,by_method[row['method']],review.authority)
             if row['method']==BOUNDED_METHOD:return _bounded(inquiries,information,plan,out)
             branch=out if len(plan['methods'])==1 else dict(out,attempts=[])

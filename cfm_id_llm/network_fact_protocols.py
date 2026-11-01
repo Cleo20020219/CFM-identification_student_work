@@ -16,6 +16,7 @@ NetworkFactProfile = Literal[
     'network-source-selections-remainder-1',
     'network-source-selections-dependencies-1',
     'network-source-selections-alignment-1',
+    'network-source-selections-mean-orders-1',
     'network-policy-definition-refs-1',
     'network-policy-record-definitions-1',
     'network-policy-scopes-1',
@@ -51,6 +52,7 @@ def _protocols():
     from . import network_remainder_contract as remainder_contract
     from . import network_source_dependencies as dependencies
     from . import reading_alignment_contract as alignment
+    from .network_mean_order_reading import PROFILE as mean_orders
     from . import policy_evidence_dependencies as explicit
     from . import policy_record_definitions as records, policy_scope_reading as scopes
     from . import policy_assumption_dependencies as assumption_dependencies
@@ -67,6 +69,7 @@ def _protocols():
         outcome_contract.CONTRACT: NetworkFactProtocol(outcome_contract.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,outcome_contract.field_constraints),
         remainder_contract.CONTRACT: NetworkFactProtocol(remainder_contract.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,remainder_contract.field_constraints),
         alignment.NETWORK_CONTRACT: NetworkFactProtocol(alignment.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,request_field_constraints=alignment.field_constraints),
+        mean_orders: NetworkFactProtocol(alignment.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,request_field_constraints=alignment.field_constraints),
         dependencies.CONTRACT: NetworkFactProtocol(dependencies.make_request, statements.parse_selection, statements.SelectionReading, statements.SELECTION_VERSION,request_field_constraints=dependencies.field_constraints),
         explicit.CONTRACT: NetworkFactProtocol(explicit.make_request, explicit.parse, explicit.Reading, explicit.CONTRACT,request_field_constraints=explicit.field_constraints),
         scopes.CONTRACT: NetworkFactProtocol(scopes.make_request, scopes.parse, scopes.Reading, scopes.CONTRACT,request_field_constraints=scopes.field_constraints),

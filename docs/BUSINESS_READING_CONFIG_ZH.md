@@ -11,11 +11,11 @@
   "target_summary_contract": "target-summary-3",
   "a0_reference_contract": "compact-source-paragraphs-1",
   "a0_response_contract": "query-conditioning-1",
-  "network_fact_contract": "network-source-selections-alignment-1"
+  "network_fact_contract": "network-source-selections-mean-orders-1"
 }
 ```
 
-本次只是选定已有配置，不改 Prompt。选择的理由是保留逐问背景、目标、比较方向和来源审核的既有合同；**不是“版本最大所以最好”，也没有证明是准确率最高的组合**。局部效应和 DAG 按已审目标选择自己的事实协议，这一网络配置并非所有家族的说明开关。
+本次推荐配置沿用已有 alignment 组件，为两政策差值增加可选均值顺序 Schema；System Prompt 不改写。旧 alignment profile 保留原请求和解析。见[均值顺序接入](NETWORK_MEAN_ORDER_ENTRY_ZH.md)。选择的理由是保留逐问背景、目标、比较方向和来源审核的既有合同；**不是“版本最大所以最好”，也没有证明是准确率最高的组合**。局部效应和 DAG 按已审目标选择自己的事实协议，这一网络配置并非所有家族的说明开关。
 
 ## 三种配置的地位
 
@@ -29,7 +29,7 @@
 
 ## 实际调用
 
-本地接口对照另有 `single-action-target-1`（A0 主政策单一归属）与 `network-policy-scopes-1`（信息范围和状态引用配对）。两者仍为显式实验配置，见[读取登记](FACT_READING_REGISTRY_ZH.md#主政策记录范围和状态引用的接口对照)。不得把历史回答删除重复字段后当成新协议模型成绩；需用新请求重新读取。推荐 JSON 本轮保持不变。
+本地接口对照另有 `single-action-target-1`（A0 主政策单一归属）与 `network-policy-scopes-1`（信息范围和状态引用配对）。两者仍为显式实验配置，见[读取登记](FACT_READING_REGISTRY_ZH.md#主政策记录范围和状态引用的接口对照)。不得把历史回答删除重复字段后当成新协议模型成绩；需用新请求重新读取。这些历史读取实验未替换推荐配置；本次均值顺序 Schema 扩展见上文。
 
 候选 `single-action-target-2` 仅增加精确重复别名兼容，并向事实阶段交接单份已审核意图。其与材料清单的冻结验收尚未通过完整真实链路，因此不替换推荐起点。阶段职责、兼容界限及实际失败见[政策交接](POLICY_STAGE_OWNERSHIP_ZH.md)与[冻结验收](CONTRACT_CLOSURE_ACCEPTANCE_ZH.md)。
 

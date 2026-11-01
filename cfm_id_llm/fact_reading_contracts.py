@@ -159,7 +159,7 @@ def registrations():
             reference_catalog=contrast.reference_catalog, model=contrast.reading_model(profile),
             documents=policy.documents, target_context=None,
             profile_field='network_fact_contract', profile=profile,
-            uses_assignment_semantics=True, field_constraints=protocol.public_constraints,
+            uses_assignment_semantics=True, field_constraints=partial(contrast.field_constraints, profile=profile),
             clarify_comparison=clarify_fact_order))
     from . import dag_query_reading as dag
     from .dag_reading import documents as dag_documents

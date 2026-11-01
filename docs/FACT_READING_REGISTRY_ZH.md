@@ -5,7 +5,7 @@
 | 读取家族 | 事实实现与特殊边界 | 业务适配器 |
 |---|---|---|
 | 固定政策均值 | `network_fact_protocols` 拥有既有配置表；单个完整政策、评价范围与信息角色 | `network_policy_dispatch` / 有限有界适配 |
-| 两政策差值 | `network_contrast_reading` 复用政策组件；保留差值专属方向、共同评价范围、联合模型检查 | `network_contrast_dispatch` |
+| 两政策差值 | `network_contrast_reading` 复用政策组件；保留差值专属方向、共同评价范围、联合模型检查 | `network_contrast_dispatch` / `network_mean_order_dispatch`；推荐 profile 增加可选、带来源的均值顺序字段，旧 profile 保持兼容 |
 | 随机化局部效应 | `readers/local_effect_lifecycle` 配对 legacy / role / owned / scoped 既有实现；解析须消费已审核局部请求 | `network_effect_dispatch` |
 | R3 观察性政策 | `network_observational_policy_reading`；固定背景须跨阶段独立交接 | `network_observational_policy_dispatch` |
 | 变量 DAG | `dag_query_reading`；保留干预值、查询范围及原生投影 | `dag_method_dispatch` |

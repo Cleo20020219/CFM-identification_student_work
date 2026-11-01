@@ -15,7 +15,7 @@ MODEL_DECISIONS=('exact_a4_values_and_complete_information_scope',
     'mean_sufficiency_all_assignments_and_all_model_nodes')
 
 
-def prepare(entry,raw,c,out):
+def prepare(entry,raw,c,out,*,_mean_order_context=None):
     from .network_policy_dispatch import BASE_CONDITIONS,READING_DECISIONS,target_coordinates
     def stop(state,reason,question=None):
         return dict(out,state=state,reason_code=reason,
@@ -62,7 +62,23 @@ def prepare(entry,raw,c,out):
                     '请明确科学界限及其含义，并单独说明总体信息和模型限制是否完整。')
     if b.bounds_kind=='OTHER' or b.bounds_scope=='OTHER':
         return stop('ADAPTER_NOT_CONNECTED','BOUNDS_KIND_OR_SCOPE_NOT_CONNECTED')
-    declarations=(b.listed_means_are_complete_information,b.no_additional_coupling_constraints)
+    method, model_decisions = METHOD, MODEL_DECISIONS
+    if _mean_order_context is not None:
+        from .network_mean_order_dispatch import METHOD as order_method, model_decisions as order_decisions
+        order_model = _mean_order_context['model']
+        modes = _mean_order_context['projection']['proposed_node_orders']
+        expected_no_coupling = all(v['mode']=='NONE' for v in modes)
+        if b.no_additional_coupling_constraints.value is None:
+            return stop('NEEDS_INPUT','MEAN_ORDER_COUPLING_STATUS_REQUIRED')
+        if b.no_additional_coupling_constraints.value is not expected_no_coupling:
+            return stop('READING_RECHECK_REQUIRED','MEAN_ORDER_AND_COUPLING_DECLARATION_CONFLICT')
+        method, model_decisions = order_method, order_decisions(c.study.nodes)
+        declarations=(b.listed_means_are_complete_information,
+                      order_model.no_additional_constraints_beyond_declared_orders)
+        out['mean_order_context'] = dict(model=order_model.model_dump(),
+                                        projection=_mean_order_context['projection'])
+    else:
+        declarations=(b.listed_means_are_complete_information,b.no_additional_coupling_constraints)
     if any(d.value is False for d in declarations):
         return stop('ADAPTER_NOT_CONNECTED','ADDITIONAL_INFORMATION_OR_COUPLING_REQUIRES_OTHER_MODEL')
     if (any(d.value is not True for d in declarations) or not b.source_ids or
@@ -73,10 +89,10 @@ def prepare(entry,raw,c,out):
         return stop('NEEDS_INPUT','BOUNDED_MODEL_DECLARATIONS_INCOMPLETE',
                     '请核对逐对象界限、均值界或结果界、期间单位、全部安排范围，以及信息完整性和无额外耦合限制声明。')
     indices=list(range(len(c.information)))
-    binding=sha(dict(entry=entry,raw=raw,method=METHOD,source_indices=indices))
-    row=dict(method=METHOD,source_indices=indices,applicability='NOT_CHECKED_BEFORE_SCIENCE_REVIEW',
+    binding=sha(dict(entry=entry,raw=raw,method=method,source_indices=indices))
+    row=dict(method=method,source_indices=indices,applicability='NOT_CHECKED_BEFORE_SCIENCE_REVIEW',
         reading_worksheet=worksheet(binding,READING_DECISIONS),
-        science_worksheet=worksheet(binding,(*BASE_CONDITIONS,*('a4_source_'+str(i) for i in indices),*MODEL_DECISIONS)))
+        science_worksheet=worksheet(binding,(*BASE_CONDITIONS,*('a4_source_'+str(i) for i in indices),*model_decisions)))
     out.update(methods=[row],proposed_target=target_coordinates(c),
         a4_projection=dict(kind='DISJOINT_EXACT_CELLS_FROM_ONE_SOURCE_DOCUMENT',
             source_documents=sorted(source_documents),original_entry_indices=indices,cell_count=len(cells)))

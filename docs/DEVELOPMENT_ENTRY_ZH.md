@@ -1,12 +1,12 @@
 # 学生开发入口与代码地图
 
-公共接口及新增能力验收见[扩展维护规则](EXTENSION_MAINTENANCE_ZH.md)；分类来源及自定义编号的边界见[文献依据](../literature_support/CLASSIFICATION_ZH.md)。
+新增能力的证明、审核与验收要求见[扩展规则](EXTENSION_MAINTENANCE_ZH.md)；分类来源及自定义编号的边界见[文献依据](../literature_support/CLASSIFICATION_ZH.md)。
 
 ## 开发位置
 
-clone独立的`CFM-identification`仓库后，直接在仓库根目录开发和运行。负责人继续在原团队工作源码中开发；本仓库是发布与协作副本，见[布局与同步规则](REPOSITORY_LAYOUT_ZH.md)。
+clone 独立 CFM-identification 仓库后，直接在根目录安装、运行和协作。负责人继续在原团队工作源码开发，验收后同步到此发布仓库，见[同步规则](REPOSITORY_LAYOUT_ZH.md)。
 
-旧ProjectCode、历史交接包和展示网页不是当前开发起点。本地API实验、安装环境、任务安排和原始运行结果不随仓库分发。
+内部任务、实验记录、安装环境和旧备份不随本仓库分发。
 
 ## 三层流程，各自负责什么
 

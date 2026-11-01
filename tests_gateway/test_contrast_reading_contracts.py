@@ -51,7 +51,23 @@ def test_registered_pair_uses_existing_config_schema_parser_and_direction_help(p
             assert actual==(clarify_fact_order(base) if signed else base)
     assert c.parse(e['bundle'],o['candidate'],binding=e['fact_binding_sha256'])==reading.parse(e['bundle'],o['candidate'],binding=e['fact_binding_sha256'],profile=profile)
     assert revision._references(e)==c.reference_catalog(e['bundle'],binding=e['fact_binding_sha256'])
-    assert revision._public_constraints(e,[''])==network_fact_protocol(profile).public_constraints([''],request=e['request'])
+    actual_constraints=revision._public_constraints(e,[''])
+    base_constraints=network_fact_protocol(profile).public_constraints([''],request=e['request'])
+    if profile=='network-source-selections-mean-orders-1':
+        # The new profile appends its schema-derived rules; old protocol rules stay intact.
+        assert actual_constraints[:len(base_constraints)]==base_constraints
+        extra=actual_constraints[len(base_constraints):]
+        schema=json.JSONDecoder().raw_decode(e['request']['user'])[0]['output_schema']
+        claim_schema=schema['$defs']['OrderClaim']
+        assert extra and all(r['field_path'].startswith('/mean_order_model') for r in extra)
+        rule=next(r for r in extra if r.get('error_code')=='NOT_ASSUMED_HAS_NO_LICENSED_LEVEL_OR_SCOPE')
+        assert rule['field_path']=='/mean_order_model/order_reading/claims/*'
+        assert rule['combination']==claim_schema['allOf'][0]
+        for name in ('relation','level','scope'):
+            assert any(r['field_path']=='/mean_order_model/order_reading/claims/*/'+name
+                and r.get('description')==claim_schema['properties'][name]['description'] for r in extra)
+    else:
+        assert actual_constraints==base_constraints
     fields=source.prepare(e,o['candidate'])['fields']
     assert all(path in fields for path in ('/target','/target/first','/target/second','/target/shared_outcome_and_context'))
     for kind in KINDS:

@@ -32,12 +32,16 @@ def target_coordinates(c):
         treatment=c.study.treatment,outcome=c.study.outcome,context=c.study.context)
 
 
-def inspect_methods(entry, raw, *, note_review=None, information_evidence_review=None):
+def inspect_methods(entry, raw, *, note_review=None, information_evidence_review=None, _mean_order_context=None):
     out = dict(empty_result(), query_id=entry['query_id'], result_scope='SELECTED_QUERY_ONLY',
         remaining_query_ids=deepcopy(entry['remaining_query_ids']), fact_family=FAMILY,
         request_sha256=entry['request_sha256'], methods=[], exclusions=[],
         method_matching='NOT_CHECKED_BEFORE_SCIENCE_REVIEW', query_review=deepcopy(entry['query_review']))
     try:
+        if _mean_order_context is not None and not (
+                entry.get('reader_id') == 'NETWORK_POLICY_CONTRAST_FACTS'
+                and entry.get('comparison_endpoint') in ('first', 'second')):
+            raise ValueError('MEAN_ORDER_REQUIRES_ORDERED_COMPARISON')
         from cfm_id_llm.fact_reading_contracts import contract_for_entry
         reader_entry = entry
         if (entry.get('reader_id') == 'NETWORK_POLICY_CONTRAST_FACTS'
@@ -131,9 +135,9 @@ def inspect_methods(entry, raw, *, note_review=None, information_evidence_review
         if notes['review'] is not None:
             # Every downstream plan and native review binds this exact adjudication.
             entry=dict(entry,reading_note_review=deepcopy(notes['review']))
-        if c.bounded_model is not None or any(s.availability=='EXACT_POPULATION_VALUE' for s in c.information):
+        if _mean_order_context is not None or c.bounded_model is not None or any(s.availability=='EXACT_POPULATION_VALUE' for s in c.information):
             from .network_bounded_dispatch import prepare
-            return prepare(entry,raw,c,out)
+            return prepare(entry,raw,c,out,_mean_order_context=_mean_order_context)
         usable = []
         for i,source in enumerate(c.information):
             if source.operator=='OTHER':

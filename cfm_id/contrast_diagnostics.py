@@ -8,9 +8,11 @@ from cfm_id_bridge.scientific_binding import sha
 from . import network_contrast_dispatch as contrast
 from . import network_policy_dispatch as policy, network_bounded_dispatch as bounded
 from . import method_requirements as requirements
+from . import network_mean_order_dispatch as orders
 
 BASE_METHODS = {contrast.POINT_METHOD: policy.R1B, contrast.R2_METHOD: policy.R2,
-                contrast.BOUNDED_METHOD: bounded.METHOD}
+                contrast.BOUNDED_METHOD: bounded.METHOD, orders.METHOD: orders.METHOD}
+JOINT_METHODS = (contrast.BOUNDED_METHOD, orders.METHOD)
 COORDINATES = ('node_order', 'first', 'second', 'unit_weights', 'operation')
 
 
@@ -22,7 +24,7 @@ def attempts(result, method_ids):
         if method is None and len(method_ids) == 1:
             method = next(iter(method_ids))
         side = row.get('endpoint')
-        if (method not in method_ids or method == contrast.BOUNDED_METHOD
+        if (method not in method_ids or method in JOINT_METHODS
                 or side not in contrast.SIDES or side in grouped.get(method, {})):
             raise ValueError('DIAGNOSTIC_INVALID_CONTRAST_ENDPOINT_ATTEMPT')
         grouped.setdefault(method, {})[side] = deepcopy(row)
@@ -41,6 +43,8 @@ def check_answer(plan, answer, attempt):
     from .workflows.policy_difference import VERSION as r2_version
     from .bounded_contrast_contract import VERSION as joint_version, input_digest
 
+    if answer['method'] == orders.METHOD:
+        return _check_order_answer(plan, answer, attempt)
     try:
         target = plan['proposed_target']
         coordinates = {k: target[k] for k in COORDINATES}
@@ -84,6 +88,26 @@ def check_answer(plan, answer, attempt):
         raise ValueError('DIAGNOSTIC_INCOHERENT_CONTRAST_RECORD') from exc
 
 
+def _check_order_answer(plan, answer, attempt):
+    from .mean_order_contract import MeanOrderProblem, VERSION, input_digest
+    try:
+        cert, claim = answer['certificate'], answer['mathematical_claim']
+        p = MeanOrderProblem.model_validate(answer['native_evidence']['problem'])
+        t = plan['proposed_target']
+        if (attempt or cert['version']!=VERSION or input_digest(p)!=answer['reviewed_input_sha256']
+                or cert['input_sha256']!=input_digest(p) or claim['target_sha256']!=sha(t)
+                or p.first!=t['first'] or p.second!=t['second'] or p.weights!=t['unit_weights']
+                or p.node_order!=t['node_order'] or p.context!=t['context']
+                or p.outcome_definition!=t['outcome'] or p.treatment_definition!=t['treatment']
+                or p.operation!='FIRST_MINUS_SECOND' or t['operation']!='first_minus_second'
+                or claim['interval']!=[cert['lower'],cert['upper']] or claim['kind']!=cert['status']
+                or any(claim[k]!=cert[k] for k in ('width','sharp','baseline_bounds_only_range',
+                                                 'informative_relative_to_bounds_only'))):
+            raise ValueError('order record')
+    except (KeyError,TypeError,ValueError,AttributeError) as exc:
+        raise ValueError('DIAGNOSTIC_INCOHERENT_MEAN_ORDER_RECORD') from exc
+
+
 def comparison_view(plan):
     target = plan.get('proposed_target') or {}
     return dict(declared_target=deepcopy(plan.get('contrast_target')),
@@ -106,11 +130,11 @@ def decorate(item, plan, answer, result=None):
             method_exclusion=deepcopy(exclusion),
             exclusion_reason=requirements.reason(exclusion.get('reason_code')) if exclusion else None,
             target=deepcopy(endpoint.get('proposed_target')))
-    item['calculation_contract'] = ('JOINT_CONTRAST_IN_ONE_MODEL' if item['method'] == contrast.BOUNDED_METHOD
+    item['calculation_contract'] = ('JOINT_CONTRAST_IN_ONE_MODEL' if item['method'] in JOINT_METHODS
                                     else 'TWO_ENDPOINTS_AND_ORDERED_COMPOSITION')
-    if (not answer and item['method'] == contrast.BOUNDED_METHOD and result is not None
+    if (not answer and item['method'] in JOINT_METHODS and result is not None
             and result.get('backend_called') is True
-            and [r['method'] for r in plan.get('methods', [])] == [contrast.BOUNDED_METHOD]):
+            and [r['method'] for r in plan.get('methods', [])] == [item['method']]):
         # Native joint failures have no endpoint attempts. Preserve the actual call.
         item['execution'] = 'EXECUTOR_REPORTED_ATTEMPT'
         item['mathematical_applicability'] = 'NOT_ESTABLISHED'
