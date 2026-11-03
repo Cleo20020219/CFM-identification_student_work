@@ -77,7 +77,8 @@
         "R3_MEAN_SIGNATURE"
       ],
       "business_method_ids": [
-        "R3_FULL_ASSIGNMENT"
+        "R3_FULL_ASSIGNMENT",
+        "R3_MEAN_SIGNATURE"
       ],
       "mathematical_documents": [
         "docs/R3_OBSERVATIONAL_FINITE_POLICY_AND_SIGNATURE_DIAGNOSTICS_ZH.md",

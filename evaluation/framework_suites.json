@@ -166,6 +166,8 @@
       "purpose": "Fast reading/registry and pre-solver admission checks. Not full mathematical or historical compatibility acceptance.",
       "selectors": [
         "tests_gateway/test_framework_acceptance.py",
+        "tests_gateway/test_comparison_endpoint_contract.py::test_configuration_cli_and_request_use_one_closed_profile_inventory",
+        "tests_gateway/test_evidence_ownership.py::test_mathematical_navigation_covers_registered_routes_and_methods",
         "tests_gateway/test_capability_registry.py::test_session_registry_matches_existing_handlers_and_frozen_acceptance_inventory",
         "tests_gateway/test_framework_contract.py::test_every_registered_lane_has_explicit_acceptance",
         "tests_gateway/test_framework_contract.py::test_reading_and_pending_review_cannot_execute",

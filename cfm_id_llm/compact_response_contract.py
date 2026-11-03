@@ -35,9 +35,10 @@ ROLE_POPULATION = 'local-role-ownership-3'
 ROLE_FIELDS = 'local-role-ownership-4'
 QUERY_CONDITIONING = 'query-conditioning-1'
 ORGANIZED = 'organized-reading-1'
-LiteralProfile = Literal['explicit-sections-1', 'explicit-field-roles-1', 'evidence-slots-1', 'inline-evidence-1', 'inline-target-roles-1', 'inline-output-guide-1', 'inline-unified-contract-1', 'inline-unified-contract-2', 'inline-unified-contract-3', 'inline-unified-contract-4', 'inline-unified-contract-5', 'inline-unified-contract-6', 'inline-unified-contract-7', 'inline-unified-contract-8', 'inline-unified-contract-9', 'inline-unified-contract-10', 'inline-unified-contract-11', 'ordered-local-comparison-1', 'ordered-local-comparison-2', 'local-change-quantity-1', 'local-change-quantity-2', 'local-role-ownership-1', 'local-role-ownership-2', 'local-role-ownership-3', 'local-role-ownership-4', 'query-conditioning-1', 'organized-reading-1', 'single-action-target-1', 'single-action-target-2', 'guided-policy-reading-1', 'model-policy-output-1']
-Profile = LiteralProfile | Literal['target-first-reading-1', 'target-first-operands-1', 'target-first-skill-1'] | None
-PROFILES = (*get_args(LiteralProfile), 'target-first-reading-1', 'target-first-operands-1', 'target-first-skill-1')
+LiteralProfile = Literal['explicit-sections-1', 'explicit-field-roles-1', 'evidence-slots-1', 'inline-evidence-1', 'inline-target-roles-1', 'inline-output-guide-1', 'inline-unified-contract-1', 'inline-unified-contract-2', 'inline-unified-contract-3', 'inline-unified-contract-4', 'inline-unified-contract-5', 'inline-unified-contract-6', 'inline-unified-contract-7', 'inline-unified-contract-8', 'inline-unified-contract-9', 'inline-unified-contract-10', 'inline-unified-contract-11', 'ordered-local-comparison-1', 'ordered-local-comparison-2', 'local-change-quantity-1', 'local-change-quantity-2', 'local-role-ownership-1', 'local-role-ownership-2', 'local-role-ownership-3', 'local-role-ownership-4', 'query-conditioning-1', 'organized-reading-1', 'single-action-target-1', 'single-action-target-2', 'guided-policy-reading-1', 'model-policy-output-1', 'target-first-reading-1', 'target-first-operands-1', 'target-first-skill-1']
+# One finite inventory owns the configuration enum, CLI choices and dispatch.
+Profile = LiteralProfile | None
+PROFILES = get_args(LiteralProfile)
 UNIFIED_PROFILES = (UNIFIED, UNIFIED_STRUCTURE, UNIFIED_INFORMATION, UNIFIED_WIRE_EVIDENCE, UNIFIED_LOCAL_STATE, UNIFIED_ENDPOINTS, UNIFIED_OPERATORS, UNIFIED_SOURCE_SCOPE, UNIFIED_STRUCTURE_SOURCE, UNIFIED_FOCUSED, UNIFIED_ALIGNMENT)
 # Closed, source-owned pairing. Consumers use these groups instead of copying
 # protocol lists across request, review, diagnostics and dispatch modules.
