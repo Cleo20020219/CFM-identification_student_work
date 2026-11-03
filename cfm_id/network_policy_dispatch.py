@@ -57,6 +57,10 @@ def inspect_methods(entry, raw, *, note_review=None, information_evidence_review
         if decoded.get('statement_reading_receipt',{}).get('conflicts'):
             return dict(out,state='READING_RECHECK_REQUIRED',reason_code='CONFLICTING_SOURCE_SCIENCE_STATEMENTS')
         c = NetworkPolicyReading.model_validate(decoded['facts'])
+        if c.study.outcome_kind == 'COUNT':
+            out['outcome_domain_embedding'] = dict(business_kind='COUNT', native_kind='continuous',
+                scope='POLICY_POINT_MEAN_ONLY', count_restriction_retained_in_business=True,
+                distributional_continuity_assumed=False, sharp_bound_or_nonidentification_transfer=False)
         if information_evidence_review is not None:
             from .network_information_evidence import check
             receipt=check(entry,raw,c,information_evidence_review)
@@ -214,7 +218,7 @@ def _compile(plan, row, records, authority):
     st = declare_network_study(network_id='network_'+sha(graph_identity),
         node_order=tuple(c.study.nodes),undirected_edges=tuple(tuple(e) for e in c.study.edges),
         treatment_variable=c.study.treatment,outcome_variable=c.study.outcome,
-        outcome_kind=c.study.outcome_kind.lower(),context_reference=c.study.context,
+        outcome_kind='continuous' if c.study.outcome_kind=='COUNT' else c.study.outcome_kind.lower(),context_reference=c.study.context,
         observation_regime='experimental',assignment_design=design,
         protocol_provenance=provenance(c.assignment.source_ids),network_provenance=provenance(c.study.source_ids),
         graph_timing_claim='DECLARED_PRETREATMENT_FIXED')
@@ -250,6 +254,8 @@ def _execute_plan(plan, *, plan_review=None, native_reviews=None, research_proto
     out=dict(empty_result(),query_id=plan['query_id'],result_scope='SELECTED_QUERY_ONLY',
         remaining_query_ids=plan['remaining_query_ids'],plan_sha256=plan['plan_sha256'],
         fact_family=FAMILY,attempts=[],exclusions=deepcopy(plan['exclusions']))
+    if plan.get('outcome_domain_embedding') is not None:
+        out['outcome_domain_embedding'] = deepcopy(plan['outcome_domain_embedding'])
     if plan.get('note_review_receipt') is not None:
         out['note_review_receipt']=deepcopy(plan['note_review_receipt'])
     if plan.get('statement_reading_receipt') is not None:

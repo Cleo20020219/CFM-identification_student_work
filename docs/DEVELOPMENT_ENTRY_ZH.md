@@ -1,12 +1,10 @@
 # 学生开发入口与代码地图
 
-新增能力的证明、审核与验收要求见[扩展规则](EXTENSION_MAINTENANCE_ZH.md)；分类来源及自定义编号的边界见[文献依据](../literature_support/CLASSIFICATION_ZH.md)。
+具体分工、独立推进与验收见内部任务安排不随发布；分类来源及自定义编号的边界见[文献依据](../literature_support/CLASSIFICATION_ZH.md)。
 
-## 开发位置
+## 仓库起点
 
-clone 独立 CFM-identification 仓库后，直接在根目录安装、运行和协作。负责人继续在原团队工作源码开发，验收后同步到此发布仓库，见[同步规则](REPOSITORY_LAYOUT_ZH.md)。
-
-内部任务、实验记录、安装环境和旧备份不随本仓库分发。
+本发布副本从独立仓库根目录运行。维护与同步约定见[仓库布局](REPOSITORY_LAYOUT_ZH.md)。历史归档、内部任务和本地 API 原答不随发布。
 
 ## 三层流程，各自负责什么
 
@@ -16,7 +14,7 @@ clone 独立 CFM-identification 仓库后，直接在根目录安装、运行和
 | 审核与连接 | 已审核的业务意图、A4 信息、A5 条件 → 原生数学问题 | `cfm_id/` 的业务模块；不因 LLM 声称成立就批准 |
 | 数学与验证 | 原生合同 → 识别式、界或反例及证书 | 原生 solver / verify；结论只在其合同范围内成立 |
 
-公共起点为 `cfm_id.project.start(case)`，固定加载 `cfm_id/configuration/reading.json`。底层仍复用 `business_intake` → `business_dispatch` → `business_case`。读错走显式复查，真实缺项走补问，覆盖缺口不冒充非识别证明。
+公共起点为 `cfm_id.project.start(case)`，固定加载 `cfm_id/configuration/reading.json`。当前主方案为目标优先的 `target-first-skill-1`，旧A0只维护兼容和必要正确性修复。底层仍复用 `business_intake` → `business_dispatch` → `business_case`。读错走显式复查，真实缺项走补问，覆盖缺口不冒充非识别证明。
 
 ## 所有顶层目录
 
@@ -33,7 +31,7 @@ clone 独立 CFM-identification 仓库后，直接在根目录安装、运行和
 | `assets/` | 固定材料、Mock、回归和历史展示资源 | 不是新算法的存放处，不接收密钥和新在线结果 |
 | `literature_support/` | 文献卡、项目数学合同与实现的导航索引 | 文献支撑、项目推导、运行覆盖和测试结果是四件事；不建第二份能力登记 |
 | `docs/` | 当前合同、操作与扩展规则 | 历史实验进入 `history/`；当前验收看 `DELIVERY_READINESS_ZH.md` |
-| `skills/` | 项目读取工作流的可选说明 | 不自动附加、不替代 Schema 和审核，未证明必然提高准确率 |
+| `skills/` | 宿主操作说明及读取资源导航 | 当前主配置实际注入的模型Skill位于`cfm_id_llm/resources/causal_business_reading/`；宿主说明不重复注入，不替代Schema与审核 |
 | `scripts/` | 测试、构建、检查的薄入口 | 不放业务判定或定理 |
 | `identification_only/` | 旧原生报告表达合同 | 兼容保留，不是所有识别能力的公共入口 |
 | `predevelopment/` | 早期两阶段设计的探索原型 | 不代表已上线能力，保留导入兼容 |
@@ -47,6 +45,7 @@ clone 独立 CFM-identification 仓库后，直接在根目录安装、运行和
 |---|---|
 | `project`、`configuration/reading.json` | 唯一推荐起点与配置 |
 | `business_intake`、`business_field_review`、`business_dispatch`、`business_case` | 业务读取生命周期、审核、逐问及整题执行 |
+| `cfm_id_llm/reviewed_intent_handoff`（读取包内） | 已审核意图到网络事实读取的交接、两种来源目录的原文位置映射和一致性审核要求；不把自然语言自动变成数学坐标 |
 | `capability_registry` | 当前数学能力与可调用入口的唯一运行登记 |
 | `method_requirements`、`method_diagnostics`及`contrast_diagnostics`/`effect_diagnostics`/`observational_diagnostics` | 从原生工作表、审核、执行记录生成[方法诊断](METHOD_DIAGNOSTICS_ZH.md)；已接政策均值、有向差值、局部直接/同伴效应、R3观察性固定背景政策，专用模块只适配证据形状，不新增数学能力或审核许可 |
 | `network_*_dispatch`、`dag_method_dispatch` | 业务适配器；将审核后的事实交给已有数学合同，不能把这些文件当 solver |

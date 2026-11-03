@@ -34,7 +34,7 @@ def test_native_catalog_agrees_with_core_replay_and_common_connection_is_explici
     data = registry.inventory()
     network = data['separate_native_entries'][0]
     assert network['route_ids'] == list(route_types)
-    assert network['common_business_routes'] == ['R1A_COMPOSITION', 'R1B_FULL_ASSIGNMENT', 'R2_MEAN_SIGNATURE', 'R3_FULL_ASSIGNMENT']
+    assert network['common_business_routes'] == ['R1A_COMPOSITION', 'R1B_FULL_ASSIGNMENT', 'R2_MEAN_SIGNATURE', 'R3_FULL_ASSIGNMENT', 'R3_MEAN_SIGNATURE']
     assert 'R1A_RANDOMIZED_ARM' in network['native_only_routes']
     assert research_route_catalog.registrations is registry.registrations
     assert research_route_catalog.separate_entries is registry.separate_entries

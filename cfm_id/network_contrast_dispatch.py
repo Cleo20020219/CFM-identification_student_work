@@ -22,7 +22,7 @@ PAIR_DECISIONS = ('two_complete_policies_and_first_minus_second_direction',
                   'common_evaluation_population_equal_weights_outcome_and_context')
 
 
-def inspect_methods(entry, raw, *, note_review=None):
+def inspect_methods(entry, raw, *, note_review=None, information_evidence_review=None):
     out = dict(empty_result(), query_id=entry['query_id'], result_scope='SELECTED_QUERY_ONLY',
         remaining_query_ids=entry['remaining_query_ids'], fact_family=FAMILY,
         request_sha256=entry['request_sha256'], query_review=deepcopy(entry['query_review']),
@@ -35,6 +35,20 @@ def inspect_methods(entry, raw, *, note_review=None):
         if contract is None or contract.reader_id != FAMILY:
             raise ValueError('ORDERED_CONTRAST_READING_CONTRACT_REQUIRED')
         decoded = contract.parse(entry['bundle'], raw, binding=entry['fact_binding_sha256'])
+        from . import network_contrast_context as fixed_context
+        context_review = fixed_context.prepare(entry, contract, decoded)
+        context_reading_decisions, context_science_decisions = (), ()
+        if context_review is not None:
+            out['target_conditioning_review'] = context_review
+            context_reading_decisions = (context_review['decision'],)
+            context_science_decisions = tuple(fixed_context.SCIENCE_REQUIREMENTS)
+        information_receipt = None
+        if information_evidence_review is not None:
+            from .network_information_evidence import check
+            from cfm_id_llm.network_policy_reading import NetworkPolicyReading
+            shared = NetworkPolicyReading.model_validate(decoded['endpoint_readings']['first']['facts'])
+            information_receipt = check(entry, raw, shared, information_evidence_review)
+            out['information_evidence_receipt'] = deepcopy(information_receipt)
         t = decoded['target']
         out.update(reading_candidate=deepcopy(raw), bundle=deepcopy(entry['bundle']),
             contrast_target=deepcopy(t), endpoint_readings=decoded['endpoint_readings'])
@@ -63,9 +77,15 @@ def inspect_methods(entry, raw, *, note_review=None):
         plans = {}
         for side in SIDES:
             endpoint = dict(entry, comparison_endpoint=side, comparison_candidate_sha256=sha(raw))
+            if information_receipt is not None:
+                # Reviewed once against the complete ordered candidate, before
+                # either endpoint projection. Never accept an LLM-made receipt.
+                endpoint['information_evidence_review'] = deepcopy(information_receipt)
             plans[side] = policy.inspect_methods(endpoint, decoded['endpoint_candidates'][side],
                 note_review=None if note_review is None else note_review[side], _mean_order_context=order_context)
         out['endpoint_plans'] = plans
+        if plans['first'].get('outcome_domain_embedding') is not None:
+            out['outcome_domain_embedding'] = deepcopy(plans['first']['outcome_domain_embedding'])
         stops = [p for p in plans.values() if p['state'] != 'REVIEW_REQUIRED' or 'plan_worksheet' not in p]
         if stops:
             # Do not let a ready endpoint stand in for an incomplete second one.
@@ -99,8 +119,8 @@ def inspect_methods(entry, raw, *, note_review=None):
             binding = sha(dict(entry=entry, raw=raw, endpoint_plans=plans, target=proposed, method=method))
             out['methods'].append(dict(method=method, source_indices=first['source_indices'],
                 applicability='NOT_CHECKED_BEFORE_SCIENCE_REVIEW',
-                reading_worksheet=worksheet(binding, (*policy.READING_DECISIONS, *PAIR_DECISIONS)),
-                science_worksheet=worksheet(binding, first['science_worksheet']['decisions'])))
+                reading_worksheet=worksheet(binding, (*policy.READING_DECISIONS, *PAIR_DECISIONS, *context_reading_decisions)),
+                science_worksheet=worksheet(binding, (*first['science_worksheet']['decisions'], *context_science_decisions))))
         out.update(proposed_target=proposed,
             scope_note='Existing ordered composition / joint finite model; no automatic endpoint interval subtraction.')
         binding = sha(dict(entry=entry, raw=raw, endpoint_plans=plans, target=proposed, methods=out['methods']))
@@ -109,8 +129,8 @@ def inspect_methods(entry, raw, *, note_review=None):
     except DispatchError as exc:
         return dict(out, state=exc.state, reason_code=exc.reason)
     except (ValueError, TypeError, KeyError, AttributeError, ArithmeticError):
-        from cfm_id_llm.network_mean_order_reading import PROFILE
-        if entry.get('network_fact_contract') == PROFILE:
+        from cfm_id_llm.network_mean_order_reading import PROFILES
+        if entry.get('network_fact_contract') in PROFILES:
             from cfm_id_llm.wire_type_diagnostics import diagnose
             diagnostics = diagnose(entry, raw)
             if diagnostics:out['reading_diagnostics'] = diagnostics
@@ -219,6 +239,10 @@ def _execute_plan(plan, *, plan_review=None, native_reviews=None, research_proto
     out = dict(empty_result(), query_id=plan['query_id'], result_scope='SELECTED_QUERY_ONLY',
         remaining_query_ids=plan['remaining_query_ids'], fact_family=FAMILY,
         plan_sha256=plan['plan_sha256'], attempts=[])
+    if plan.get('outcome_domain_embedding') is not None:
+        out['outcome_domain_embedding'] = deepcopy(plan['outcome_domain_embedding'])
+    if plan.get('information_evidence_receipt') is not None:
+        out['information_evidence_receipt'] = deepcopy(plan['information_evidence_receipt'])
     try:
         if research_protocol_selected is not True:
             raise DispatchError('REVIEW_REQUIRED', 'EXPLICIT_RESEARCH_PROTOCOL_SELECTION_REQUIRED')

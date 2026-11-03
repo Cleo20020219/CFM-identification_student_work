@@ -35,15 +35,18 @@ ROLE_POPULATION = 'local-role-ownership-3'
 ROLE_FIELDS = 'local-role-ownership-4'
 QUERY_CONDITIONING = 'query-conditioning-1'
 ORGANIZED = 'organized-reading-1'
-LiteralProfile = Literal['explicit-sections-1', 'explicit-field-roles-1', 'evidence-slots-1', 'inline-evidence-1', 'inline-target-roles-1', 'inline-output-guide-1', 'inline-unified-contract-1', 'inline-unified-contract-2', 'inline-unified-contract-3', 'inline-unified-contract-4', 'inline-unified-contract-5', 'inline-unified-contract-6', 'inline-unified-contract-7', 'inline-unified-contract-8', 'inline-unified-contract-9', 'inline-unified-contract-10', 'inline-unified-contract-11', 'ordered-local-comparison-1', 'ordered-local-comparison-2', 'local-change-quantity-1', 'local-change-quantity-2', 'local-role-ownership-1', 'local-role-ownership-2', 'local-role-ownership-3', 'local-role-ownership-4', 'query-conditioning-1', 'organized-reading-1', 'single-action-target-1', 'single-action-target-2']
-Profile = LiteralProfile | None
-PROFILES = get_args(LiteralProfile)
+LiteralProfile = Literal['explicit-sections-1', 'explicit-field-roles-1', 'evidence-slots-1', 'inline-evidence-1', 'inline-target-roles-1', 'inline-output-guide-1', 'inline-unified-contract-1', 'inline-unified-contract-2', 'inline-unified-contract-3', 'inline-unified-contract-4', 'inline-unified-contract-5', 'inline-unified-contract-6', 'inline-unified-contract-7', 'inline-unified-contract-8', 'inline-unified-contract-9', 'inline-unified-contract-10', 'inline-unified-contract-11', 'ordered-local-comparison-1', 'ordered-local-comparison-2', 'local-change-quantity-1', 'local-change-quantity-2', 'local-role-ownership-1', 'local-role-ownership-2', 'local-role-ownership-3', 'local-role-ownership-4', 'query-conditioning-1', 'organized-reading-1', 'single-action-target-1', 'single-action-target-2', 'guided-policy-reading-1', 'model-policy-output-1']
+Profile = LiteralProfile | Literal['target-first-reading-1', 'target-first-operands-1', 'target-first-skill-1'] | None
+PROFILES = (*get_args(LiteralProfile), 'target-first-reading-1', 'target-first-operands-1', 'target-first-skill-1')
 UNIFIED_PROFILES = (UNIFIED, UNIFIED_STRUCTURE, UNIFIED_INFORMATION, UNIFIED_WIRE_EVIDENCE, UNIFIED_LOCAL_STATE, UNIFIED_ENDPOINTS, UNIFIED_OPERATORS, UNIFIED_SOURCE_SCOPE, UNIFIED_STRUCTURE_SOURCE, UNIFIED_FOCUSED, UNIFIED_ALIGNMENT)
 # Closed, source-owned pairing. Consumers use these groups instead of copying
 # protocol lists across request, review, diagnostics and dispatch modules.
 # The historical LOCAL name denotes the response family; all these profiles
 # also retain nonlocal targets. Query conditioning extends that same family.
 LOCAL_PROFILE_MODULES = {
+    'target-first-skill-1': 'target_first_skill',
+    'target-first-operands-1': 'target_first_operands',
+    'target-first-reading-1': 'target_first_reading',
     ORDERED_LOCAL: 'ordered_comparison_contract', ORDERED_HANDOFF: 'ordered_target_handoff',
     CHANGE_QUANTITY: 'requested_change_contract', ROLE_COORDINATES: 'role_coordinate_contract',
     ROLE_OWNERSHIP: 'local_role_ownership', ROLE_SCOPE: 'scoped_role_contract',
@@ -51,9 +54,11 @@ LOCAL_PROFILE_MODULES = {
     QUERY_CONDITIONING: 'query_conditioning_contract', ORGANIZED: 'organized_reading_contract',
     'single-action-target-1': 'policy_action_contract',
     'single-action-target-2': 'policy_action_compat',
+    'guided-policy-reading-1': 'guided_policy_reading',
+    'model-policy-output-1': 'model_policy_output',
 }
 LOCAL_COMPARISON_PROFILES = tuple(LOCAL_PROFILE_MODULES)
-REVIEWED_TARGET_PROFILES = tuple(p for p in LOCAL_COMPARISON_PROFILES if p != ORDERED_LOCAL)
+REVIEWED_TARGET_PROFILES = tuple(p for p in LOCAL_COMPARISON_PROFILES if p not in (ORDERED_LOCAL, 'target-first-reading-1', 'target-first-operands-1', 'target-first-skill-1'))
 ROLE_REQUEST_PROFILES = tuple(p for p in REVIEWED_TARGET_PROFILES if p != ORDERED_HANDOFF)
 TARGET_CLARIFICATION_PROFILES = (UNIFIED_OPERATORS, UNIFIED_SOURCE_SCOPE, UNIFIED_STRUCTURE_SOURCE, UNIFIED_FOCUSED, UNIFIED_ALIGNMENT, *LOCAL_COMPARISON_PROFILES)
 GUIDANCE = '''
@@ -96,6 +101,15 @@ def evidence_contract(contract):
     return None
 
 
+def policy_focus_readers(contract):
+    """Closed stage-handoff scope; preserve old requests for old profiles."""
+    adapter = evidence_contract(contract)
+    if adapter is None or not hasattr(adapter, 'policy_focus'):
+        return ()
+    return getattr(adapter, 'POLICY_FOCUS_READERS', (
+        'NETWORK_FIXED_POLICY_FACTS', 'NETWORK_POLICY_CONTRAST_FACTS'))
+
+
 def review_definition(rule, contract):
     """New profile shares its public role with the independent reviewer.
 
@@ -136,7 +150,7 @@ def scope_recheck_roles(roles, *, contract, user_prompt, candidate):
     correct reading. Values, citations and all independent reviews are unchanged.
     Local-effect and unrecognized fields retain their existing handling.
     """
-    if contract not in LOCAL_COMPARISON_PROFILES:
+    if contract not in LOCAL_COMPARISON_PROFILES or contract in ('target-first-reading-1','target-first-operands-1','target-first-skill-1'):
         return roles
     from .compact_reference_contract import split_user
     schema = split_user(user_prompt)[2]

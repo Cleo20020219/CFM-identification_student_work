@@ -20,6 +20,11 @@ def prepare(entry,raw,c,out,*,_mean_order_context=None):
     def stop(state,reason,question=None):
         return dict(out,state=state,reason_code=reason,
             clarification_questions=[question] if question else out['clarification_questions'])
+    # A POINT identity for real-valued outcomes also applies to counts. Sharp
+    # bounds/nonidentification additionally need count-valued witness models;
+    # that transfer has not been established by this business adapter.
+    if c.study.outcome_kind == 'COUNT':
+        return stop('ADAPTER_NOT_CONNECTED','COUNT_BOUNDED_MODEL_NOT_CONNECTED')
     if (c.assignment.kind!='UNIFORM_FIXED_QUOTA' or len(c.study.nodes)>MAX_N
             or c.exposure.kind not in ('STRICT_MAJORITY_TIES_LOW','UNKNOWN','NONE','OTHER')):
         return stop('ADAPTER_NOT_CONNECTED','BOUNDED_D2_E1_FINITE_DOMAIN_REQUIRED')
@@ -35,7 +40,7 @@ def prepare(entry,raw,c,out,*,_mean_order_context=None):
         return stop('NEEDS_INPUT','COMPLETE_EXACT_A4_VALUE_LIST_REQUIRED',
                     '请补齐已声明总体均值的完整对象/自身处理/同伴暴露格子及精确数值。')
     # Partitioning one original table into several JSON rows does not change A4.
-    # Only concatenate exact disjoint cells from one source document. One entry
+    # Only concatenate exact disjoint cells from one source document. Records
     # may additionally cite definitions, but only after explicit evidence-role
     # review. Never merge independent sources or average duplicate cells.
     from .source_locations import build_catalog
@@ -43,7 +48,7 @@ def prepare(entry,raw,c,out,*,_mean_order_context=None):
     catalog=build_catalog(documents(entry['bundle']))
     source_documents={catalog[sid]['doc_id'] for s in c.information for sid in s.source_ids}
     supporting_evidence=entry.get('information_evidence_review')
-    if len(source_documents)!=1 and not (len(c.information)==1 and supporting_evidence is not None):
+    if len(source_documents)!=1 and supporting_evidence is None:
         return stop('ADAPTER_NOT_CONNECTED','EXACT_SINGLE_SOURCE_TABLE_REQUIRED')
     cells=[(v.node,v.own,v.exposure) for s in c.information for v in s.signature_cells]
     if len(cells)!=len(set(cells)):

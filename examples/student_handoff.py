@@ -30,15 +30,13 @@ def a0_fixture(session):
         outcome=claim('本周任务是否按时完成，完成记1、未完成记0。','study'),
         assignment_family='INDEPENDENT_BERNOULLI' if '各自独立' in docs['assignment'] else 'COMPLETE_RANDOMIZATION',
         assignment_law=claim(docs['assignment'],'assignment'),unit_network=claim(docs['network'],'network'),
-        network_pretreatment_status=claim('合作网络在处理之前固定。','network'),
-        exposure_mapping=claim(docs['exposure'],'exposure'),variable_causal_graph='UNKNOWN',covariates=[],
-        available_information=claim(docs['information'],'information'))
+        variable_causal_graph='UNKNOWN')
     goal=claim(case.business_question,'business_question')
     sem=dict(target_population=claim('评价完整研究名单中的全部网点。','business_question','study'),
-        intervention=claim('完整研究名单中每个网点都使用AI助手。','business_question','study'),
-        comparator='NOT_APPLICABLE',neighbor_exposure='UNKNOWN',aggregation=claim('全部网点等权平均。','business_question'),
-        time_horizon=claim('本周。','study'),policy_assignment=claim('完整研究名单中的每个网点均使用AI，处理记为1。','business_question','study'),
-        standardization_distribution='UNKNOWN',conditioning_context='UNKNOWN')
+        first_arrangement=claim('完整研究名单中每个网点都使用AI助手。','business_question','study'),
+        second_arrangement='NOT_APPLICABLE',neighbor_exposure='UNKNOWN',aggregation=claim('全部网点等权平均。','business_question'),
+        time_horizon=claim('本周。','study'),outcome=deepcopy(common['outcome']),
+        standardization_distribution='UNKNOWN',conditioning_context='UNKNOWN',decision_constraints='UNKNOWN')
     return dict(common=common,queries=[dict(kind='FIXED_POLICY_VALUE',goal=goal,semantics=sem,
         comparison_order=dict(operation='NOT_APPLICABLE',refs=goal['refs']))],reference_context=request_context(request['user_prompt']))
 
@@ -65,6 +63,12 @@ def fact_fixture(entry,name):
         raw['mean_sufficiency']['source_ids']=list(dict.fromkeys(raw['mean_sufficiency']['source_ids']+defs+raw['exposure']['source_ids']))
     for info in raw['information']:
         info['source_ids']=list(dict.fromkeys(info['source_ids']+defs+(raw['exposure']['source_ids'] if info['signature_cells'] else [])))
+    if entry.get('network_fact_contract') == 'network-shared-definitions-1':
+        # These are explicit offline fixtures, never edits to an LLM response.
+        from cfm_id_llm.shared_fact_definitions import LAW_NAMES
+        raw['study']['network_source_ids']=[sid for sid,row in refs['aliases'].items() if row['doc_id']=='network']
+        reverse={value:key for key,value in LAW_NAMES.items()}
+        for info in raw['information']:info['operator']=reverse.get(info['operator'],info['operator'])
     return raw
 
 

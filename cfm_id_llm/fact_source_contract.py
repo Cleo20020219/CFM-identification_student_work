@@ -27,3 +27,15 @@ def role_for(path):
     if 'assignment_masses' in parts:
         return '本行的完整使用向量和概率；引用同时覆盖行值与用来解释坐标的对象顺序、编码。表头不是概率值的来源。'
     return ROLES.get(root, '按当前读取Schema核对本字段的原文含义、状态、范围及引用；不补造事实或科学许可。')
+
+
+def public_contract(record_paths):
+    """Export the existing review rules; never infer sources or alter a reading.
+
+    Readers opt in explicitly. Existing review worksheets and legacy requests
+    keep their bindings. Definition links require a separately declared wire
+    contract; publishing this rule alone does not enable such links.
+    """
+    return dict(version='fact-source-review-rules-1', evidence_rule=EVIDENCE_RULE,
+        field_roles={path:role_for(path) for path in record_paths},
+        scientific_approval=False, automatic_repair=False)

@@ -10,11 +10,13 @@
 
 读错后显式复查；缺条件时追问；方法未覆盖时报告覆盖缺口。未验证的 LLM 候选不能替代正式结论。当前是**需要审核的研究框架**，业务首读准确率仍有不足。
 
-## 仓库与起点
+## 唯一源码与起点
 
-这是独立的 [CFM-identification](https://github.com/zzyyLOGIC/CFM-identification) 仓库。clone 后直接在仓库根目录安装、运行和开发，无需进入全流程仓库的子目录。负责人仍在原团队工作源码中开发，验收后同步到这里；详见[仓库布局与同步规则](docs/REPOSITORY_LAYOUT_ZH.md)。证书内部摘要保留，用于检查材料和审核的一致性。
+此独立仓库从根目录安装和运行。维护与发布副本的同步约定见[仓库布局](docs/REPOSITORY_LAYOUT_ZH.md)。证书内部摘要用于防止材料或审核被替换。
 
-新应用统一使用 [`cfm_id.project`](cfm_id/project.py)，读取唯一推荐配置 [`cfm_id/configuration/reading.json`](cfm_id/configuration/reading.json)。这是从已有合同中选定的教学起点，没有修改 Prompt，也不声称它的准确率最优。旧默认值和旧协议只为兼容保留，见[配置指南](docs/BUSINESS_READING_CONFIG_ZH.md)。
+新应用统一使用 [`cfm_id.project`](cfm_id/project.py)，读取唯一推荐配置 [`cfm_id/configuration/reading.json`](cfm_id/configuration/reading.json)。当前主方案为目标优先的新候选 `target-first-skill-1`，实际加载包内读取 Skill；网络事实阶段保留已审核意图并强制核对交接。它仍是需要独立审核的研究入口，不代表已证明稳定的自然语言准确率。旧 API 默认值和旧协议只为兼容保留，见[配置指南](docs/BUSINESS_READING_CONFIG_ZH.md)与[意图交接](docs/REVIEWED_INTENT_HANDOFF_ZH.md)。
+
+固定政策均值和两政策差值现采用共同定义事实合同。10份冻结业务中，LongCat两轮完整链路通过9/10和8/10；DeepSeek两种设置均4/10。受测范围、失败与审核条件见[真实验收](docs/SHARED_DEFINITION_ACCEPTANCE_ZH.md)，不能将其外推为所有能力的准确率。
 
 ## 安装，运行三个完整示例
 
@@ -48,9 +50,8 @@ request = prepare_request(session)  # 只准备请求；不调用模型、不自
 
 也可执行 `python -m cfm_id.project start --input case.json --output outputs/new_case`。后续接收回答、逐项审核、分派与执行见[会话操作](docs/BUSINESS_INTAKE_ZH.md)和[业务分派](docs/BUSINESS_DISPATCH_ZH.md)。
 
-## 开发阅读顺序
+## 学生按这个顺序阅读
 
-分类的综述/定理依据与项目自定义边界见[分类与文献依据](literature_support/CLASSIFICATION_ZH.md)。开发文档说明当前能力与扩展接口，不包含内部人员分工。
 
 1. [目录与代码地图](docs/DEVELOPMENT_ENTRY_ZH.md)：每个文件夹的职责，哪些文件属于数学 Core。
 2. [读取配置](docs/BUSINESS_READING_CONFIG_ZH.md)：推荐起点、兼容默认和实验的边界。
@@ -59,6 +60,8 @@ request = prepare_request(session)  # 只准备请求；不调用模型、不自
 5. [本次交接验收](docs/DELIVERY_READINESS_ZH.md)、[未解决项](docs/KNOWN_LIMITATIONS_ZH.md)。
 
 五类当前短引用读取家族已共用[读取组件登记](docs/FACT_READING_REGISTRY_ZH.md)：固定政策均值、两政策差值、局部效应、R3 观察性政策、变量 DAG。它们仍各自保持目标与科学审核，登记不是数学求解器，也不会自动批准条件。
+
+观察性固定政策均值另提供[均值签名读取配置](docs/R3_POLICY_ENTRY_CONTRACT_ZH.md)，连接已有`R3_MEAN_SIGNATURE`：完整政策无支持时，需要独立审核全安排条件均值充分性及其评价范围，并由原生后端验证目标签名正支持。默认读取配置保持不变；此接入的离线验收不代表LLM准确率。
 
 已有计划可通过 `project.diagnose_methods` 查看[方法条件诊断](docs/METHOD_DIAGNOSTICS_ZH.md)。覆盖固定政策均值、两政策有向差值、局部直接效应与同伴效应、R3观察性固定背景完整政策均值，分开显示审核、数学检查与原执行证据；不改变执行规则、不自动补假设。固定政策示例：`python -m examples.method_diagnostics --allow-synthetic-reviews --output outputs/method_examples`；差值示例：`python -m examples.contrast_method_diagnostics --allow-synthetic-reviews --output outputs/contrast_method_examples`；局部效应示例：`python -m examples.effect_method_diagnostics --allow-synthetic-reviews --output outputs/effect_method_examples`。差值保留比较方向、共同评价范围及联合求界；局部效应保留自身/同伴两端状态、固定评价名单及原设计条件平均，局部状态成功不能替代完整效应证据。 R3示例：`python -m examples.observational_method_diagnostics --allow-synthetic-reviews --output outputs/observational_method_examples`；固定背景、交换性审核和完整政策正支持分别显示。
 
@@ -76,4 +79,4 @@ python scripts/check_offline.py
 
 ## 历史内容
 
-当前操作指南在 `docs/`。内部任务安排、分轮实验日志和本地结果不随本仓库分发。`examples/legacy/` 中保留必要的冻结兼容夹具，其中两份合成业务模型回答只用于离线回放。大批在线输入输出仍保存在源码外，不随此包交付。`predevelopment/`、`research_partial/` 是保留旧导入的原型，正式 PARTIAL 位置见代码地图。协议内部标识不随文件整理更名，以保持请求、审核和证书兼容。
+当前操作指南在 `docs/`，分轮实验与旧状态记录移到 `docs/history/`。旧学生演示移到 `examples/legacy/`；其中两份模型回答是必要的冻结兼容夹具。大批在线输入输出仍保存在源码外，不随此包交付。`predevelopment/`、`research_partial/` 是保留旧导入的原型，正式 PARTIAL 位置见代码地图。协议内部标识不随文件整理更名，以保持请求、审核和证书兼容。

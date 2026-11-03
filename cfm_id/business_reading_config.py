@@ -10,6 +10,7 @@ from cfm_id_llm.target_summary_contract import Profile as TargetSummaryProfile
 from cfm_id_llm.compact_reference_contract import Profile as A0ReferenceProfile
 from cfm_id_llm.compact_response_contract import Profile as A0ResponseProfile, UNIFIED_PROFILES, LOCAL_COMPARISON_PROFILES
 from cfm_id_llm.network_fact_protocols import NetworkFactProfile
+from cfm_id_llm.network_observational_signature_reading import Profile as ObservationalProfile
 
 ReadingFormat = Literal['canonical', 'compact']
 FactFormat = Literal['source_hash', 'short_refs']
@@ -25,12 +26,14 @@ class ReadingConfig(BaseModel):
     a0_reference_contract: A0ReferenceProfile = None
     a0_response_contract: A0ResponseProfile = None
     network_fact_contract: NetworkFactProfile = None
+    observational_fact_profile: ObservationalProfile = None
     material_handoff: Literal['information-inventory-1'] | None = None
 
     @model_serializer(mode='wrap')
     def historical_options(self, handler):
         result = handler(self)
         if result.get('material_handoff') is None:result.pop('material_handoff',None)
+        if result.get('observational_fact_profile') is None:result.pop('observational_fact_profile',None)
         return result
 
     @model_validator(mode='after')
@@ -43,6 +46,8 @@ class ReadingConfig(BaseModel):
                 self.assignment_semantics, self.target_summary_contract,
                 self.a0_reference_contract, self.a0_response_contract)):
             raise ValueError('COMPACT_READING_REQUIRED_FOR_A0_OPTIONS')
+        if self.observational_fact_profile is not None and self.fact_format != 'short_refs':
+            raise ValueError('OBSERVATIONAL_PROFILE_REQUIRES_SHORT_REFS')
         if self.network_fact_contract is not None and self.fact_format != 'short_refs':
             raise ValueError('NETWORK_FACT_CONTRACT_REQUIRES_SHORT_REFS')
         return self

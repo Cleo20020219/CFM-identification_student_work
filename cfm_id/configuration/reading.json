@@ -5,6 +5,6 @@
   "assignment_semantics": "joint-assignment-law-1",
   "target_summary_contract": "target-summary-3",
   "a0_reference_contract": "compact-source-paragraphs-1",
-  "a0_response_contract": "query-conditioning-1",
-  "network_fact_contract": "network-source-selections-mean-orders-1"
+  "a0_response_contract": "target-first-skill-1",
+  "network_fact_contract": "network-shared-definitions-1"
 }

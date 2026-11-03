@@ -1,6 +1,6 @@
-# Causal-IDFM Identification 有限观测网络 R3 POINT / D2-E1 Signature Support 诊断
+# Causal-IDFM Identification v2.3：有限观测网络 R3 POINT / D2-E1 Signature Support 诊断
 
-当前接入状态（2026-10-30）：共同业务入口已连接固定 W 的 **R3_FULL_ASSIGNMENT** 子域，见 [接入合同](R3_POLICY_ENTRY_CONTRACT_ZH.md)。下文保留原生数学定义与历史批次说明，不代表其他 R3 目标已全部接入。
+当前接入状态：共同业务入口已连接固定W的 **R3_FULL_ASSIGNMENT**，显式签名读取配置另接 **R3_MEAN_SIGNATURE**，见 [接入合同](R3_POLICY_ENTRY_CONTRACT_ZH.md)。下文保留原生数学定义与历史批次说明，不代表其他R3目标已全部接入。
 
 **研究版严格增量；正式基线 v2.2。日期：2026-10-17。** 不修改 Estimation / Policy / 旧的正式 R1a/R1b/R2 后端，保留 v2.2 原 32 张业务卡。
 

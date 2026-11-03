@@ -164,6 +164,11 @@ def fact_reference(entry,data):
         if profile in ('network-policy-scopes-1','network-policy-scopes-2'):
             for info in c['information']:
                 info.update(scope_status='DECLARED',scope_source_ids=list(info['source_ids']))
+        if profile == 'network-shared-definitions-1':
+            from cfm_id_llm.shared_fact_definitions import LAW_NAMES
+            c['study']['network_source_ids']=ids('network')
+            reverse={value:key for key,value in LAW_NAMES.items()}
+            for info in c['information']:info['operator']=reverse.get(info['operator'],info['operator'])
     return c
 
 

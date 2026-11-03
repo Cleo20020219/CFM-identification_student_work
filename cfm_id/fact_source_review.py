@@ -53,7 +53,7 @@ def _prepare_fields(entry, candidate):
     """A local worksheet, no model call and no native method selection."""
     from .fact_reading_revision import _references, _paths
     from cfm_id_llm.fact_wire_models import model_for
-    from cfm_id_llm.source_reference_wire import expand
+    from cfm_id_llm.source_reference_wire import expand, definition_evidence
     if entry.get('state') != 'READY_TO_READ' or entry.get('reader_id') not in FAMILIES:
         raise ValueError('SOURCE_REVIEW_REQUIRES_CONNECTED_NETWORK_READER')
     _paths(candidate)
@@ -75,18 +75,8 @@ def _prepare_fields(entry, candidate):
         if type(value) is dict:
             groups = {k:deepcopy(v) for k,v in value.items() if k.endswith('source_ids')}
             if groups:
-                dependencies = {}
-                uses = value.get('definition_refs',[])
-                if type(uses) is not list or len(set(uses)) != len(uses):
-                    raise ValueError('UNIQUE_EXPLICIT_DEFINITIONS_REQUIRED')
-                for name in uses:
-                    if name not in definitions:
-                        raise ValueError('UNREGISTERED_DEFINITION_DEPENDENCY')
-                    definition = definitions[name]
-                    origin = _pointer(candidate,definition['path'])
-                    if not origin or any(k not in refs['aliases'] for k in origin):
-                        raise ValueError('CITED_DEFINITION_REQUIRED')
-                    dependencies[name] = dict(definition=deepcopy(definition),source_ids=deepcopy(origin))
+                dependencies = definition_evidence(candidate,definitions,value.get('definition_refs',[]),
+                    record_path=path,aliases=refs['aliases'])
                 rows[path] = dict(role=role_for(path),candidate=deepcopy(value),citation_groups=groups,
                     explicit_definitions=dependencies,scope='RECORD_LOCAL_CITATIONS_ONLY')
             for k,v in value.items():
@@ -94,6 +84,9 @@ def _prepare_fields(entry, candidate):
         elif type(value) is list:
             for i,v in enumerate(value):walk(v,path+'/'+str(i))
     walk(candidate)
+    if entry.get('reviewed_intent') is not None:
+        from cfm_id_llm.reviewed_intent_handoff import add_review_expectations
+        add_review_expectations(rows,entry['reviewed_intent'])
     # New contracts expose their schema-owned combination rules for reviewers.
     # No metadata is added to old worksheets, preserving historical bindings.
     schema=body.get('output_schema',{})
@@ -101,17 +94,29 @@ def _prepare_fields(entry, candidate):
     if mean_ref.startswith('#/$defs/') and '/mean_sufficiency' in rows:
         rules=schema.get('$defs',{}).get(mean_ref.rsplit('/',1)[-1],{}).get('x-cfm-field-contract')
         if rules:rows['/mean_sufficiency']['combination_rules']=deepcopy(rules)
-    if entry.get('network_fact_contract') == 'network-source-selections-mean-orders-1':
+    from cfm_id_llm.network_mean_order_reading import PROFILES
+    if entry.get('network_fact_contract') in PROFILES:
         from cfm_id_llm.mean_order_field_contract import field_constraints
         for path, row in rows.items():
             if path.startswith('/mean_order_model'):
                 row['public_field_constraints'] = field_constraints([path], request=entry['request'])
+    from cfm_id_llm import mean_order_ownership as ownership
+    if entry.get('network_fact_contract') == ownership.PROFILE:
+        checks = ownership.overlap_checks(candidate)
+        for path, row in rows.items():
+            constraints = ownership.field_constraints([path], request=entry['request'])
+            if constraints:
+                row.setdefault('public_field_constraints', []).extend(constraints)
+            if path in checks:
+                row['ownership_check'] = checks[path]
+    from cfm_id_llm.shared_fact_definitions import add_review_definitions
+    evidence_rule = add_review_definitions(rows,candidate,entry,body) or EVIDENCE_RULE
     source_catalog = deepcopy(refs['aliases'])
     identity = dict(version=VERSION,entry=entry,candidate=candidate,fields=rows,
-        source_catalog=source_catalog,evidence_rule=EVIDENCE_RULE)
+        source_catalog=source_catalog,evidence_rule=evidence_rule)
     return dict(version=VERSION,binding_sha256=sha(identity),expected_authority=entry['query_review']['authority'],
         query_id=entry['query_id'],request_sha256=entry['request_sha256'],reader_id=entry['reader_id'],
-        fields=rows,source_catalog=source_catalog,original_materials=deepcopy(entry['bundle']),evidence_rule=EVIDENCE_RULE,
+        fields=rows,source_catalog=source_catalog,original_materials=deepcopy(entry['bundle']),evidence_rule=evidence_rule,
         decisions={k:dict(**{a:'PENDING' for a in DIMENSIONS},reason='',source_ids=[]) for k in rows},
         is_approval=False,scientific_approval=False,backend_called=False,
         scope='Source roles, completeness and actual citation coverage only; no candidate repair or mathematical conclusion.')
@@ -142,6 +147,8 @@ def inspect_review(entry, candidate, record):
             set(r.decisions) != set(w['fields']) or not r.reviewer.strip() or not r.evidence.strip()):
         raise ValueError('INVALID_OR_STALE_FACT_SOURCE_REVIEW')
     validate_decision_evidence(r.decisions,w['source_catalog'])
+    from .source_review_diagnostics import describe
+    out['source_review_diagnostics'] = describe(w, r)
     record = r.model_dump(mode='json')
     receipt = dict(version=VERSION,review=record,review_sha256=sha(record),
         candidate_sha256=sha(candidate),request_sha256=entry['request_sha256'],

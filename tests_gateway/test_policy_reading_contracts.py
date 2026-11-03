@@ -38,7 +38,8 @@ def candidate(entry,kind):
             raw['mean_sufficiency']['definition_refs']=['study'] if raw['mean_sufficiency']['covered_nodes'] else []
     if profile in ('network-policy-scopes-1','network-policy-scopes-2'):
         for info in raw['information']:info.update(scope_status='DECLARED' if info['outcome_nodes'] else 'UNSPECIFIED',scope_source_ids=list(info['source_ids']) if info['outcome_nodes'] else [])
-    return raw
+    from tests_gateway._reading_contract_checks import current_fixture
+    return current_fixture(entry,raw)
 
 
 def setup(kind='partial',profile=None):

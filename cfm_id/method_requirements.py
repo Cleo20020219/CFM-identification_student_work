@@ -37,6 +37,8 @@ LABELS = {
     'complete_positive_assignment_support': '总体安排表已列全正概率安排；不等于目标政策有正概率',
     'means_for_all_positive_assignments': '全部正概率安排下所需对象的总体条件均值可用',
     'same_study_and_conditioning': '总体信息与目标属于同一研究和固定背景',
+    observational.SIGNATURE_READING_DECISIONS[0]: '同伴暴露定义、同一固定背景下的均值充分性及明确作用范围',
+    observational.SIGNATURE_SCIENCE_DECISIONS[0]: '全部评价对象在所有完整二元安排下的条件均值签名充分性',
     MATCH_DECISION: '事实阶段的固定背景与已审核业务目标一致，须独立核对原文',
     policy.R2_SCIENCE_DECISIONS[0]: '覆盖目标对象、所有完整安排的均值签名充分性',
     bounded.MODEL_DECISIONS[0]: '精确 A4 数值及总体信息范围完整',
@@ -69,6 +71,13 @@ def condition_label(key):
 def catalog(family=FAMILY):
     """Describe registered routes; these templates do not generate approvals."""
     definitions = {
+        observational.SIGNATURE_METHOD: ('固定背景下的观察性均值签名 R3',
+            (*observational.READING_DECISIONS, *observational.SIGNATURE_READING_DECISIONS,
+             *observational.BASE_CONDITIONS, *observational.SIGNATURE_SCIENCE_DECISIONS,
+             'a4_population_operator', *observational.A4_DECLARATIONS),
+            '逐评价对象的目标签名正支持、同一固定W下的A4覆盖和独立证书重放',
+            '沿用有限观察性总体表，另审对所有完整二元安排的条件均值充分性。'
+            'E1–E5逐题检查适用域；不从暴露定义或总体概率推出充分性、交换性。'),
         observational.METHOD: ('固定背景下的观察性完整政策均值 R3',
             (*observational.READING_DECISIONS, *observational.BASE_CONDITIONS,
              'a4_population_operator', *observational.A4_DECLARATIONS),
@@ -123,6 +132,14 @@ def catalog(family=FAMILY):
 
 
 REASONS = {
+    'DECLARED_MODEL_EXCLUDES:mean_signature_sufficiency':
+        ('PRESERVE_REJECTED_MEAN_SUFFICIENCY', '完整政策无支持且原模型不采用均值充分性，当前签名路线不能运行；不宣称一般不可识别。'),
+    'CONDITIONAL_MEAN_SUFFICIENCY_SCOPE_NOT_CONNECTED':
+        ('REVIEW_CONDITIONAL_MEAN_SCOPE', '本路线需要同一固定W下、所有完整二元安排上的条件均值充分性；只在已观测支持内成立不够。'),
+    'OBSERVATIONAL_SIGNATURE_MAPPING_NOT_CONNECTED':
+        ('REVIEW_SIGNATURE_MAPPING', '当前暴露定义不在此入口的既有映射范围内，保留定义，不自动替换。'),
+    'ZERO_OBSERVATIONAL_SIGNATURE_SUPPORT':
+        ('INSPECT_OBSERVATIONAL_SIGNATURE_SUPPORT', '原生检查报告至少一个评价对象的目标签名没有支持；不能忽略该对象、改变政策或默认转PARTIAL。'),
     'OBSERVATIONAL_POLICY_FACTS_INCOMPLETE':
         ('CLARIFY_OBSERVATIONAL_TARGET_AND_INFORMATION', '按原生追问核对完整政策、固定背景、评价名单、交换性及总体信息；不补造条件。'),
     'DECLARED_MODEL_EXCLUDES:full_vector_conditional_exchangeability':

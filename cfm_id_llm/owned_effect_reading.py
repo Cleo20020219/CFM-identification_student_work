@@ -9,11 +9,11 @@ import json
 from pydantic import Field
 from . import network_effect_reading as legacy, role_effect_reading as roles
 from .source_reference_wire import expand
+from .network_policy_reading import COUNT_RULE
 
 VERSION='network-owned-effect-reading-1'
 DEFINITIONS=('study','exposure')
 DEPENDENCY_RULE='source_ids只引用本记录主张的直接原文；definition_refs显式引用本次其他定义记录。study提供名册和本人编码，exposure提供同伴编码。两类来源共同接受审核，不自动补依赖或认定引用支持语义。'
-COUNT_RULE='BINARY为0/1结果；COUNT为非负整数次数；CONTINUOUS为连续数值结果。计数均值不是整数，COUNT不要求Poisson、不授予有限矩、上界、暴露充分性或PARTIAL。OTHER包括无明确数值含义的类别，UNKNOWN表示未知。'
 
 class Study(legacy.Study):
  outcome_kind: Literal['BINARY','COUNT','CONTINUOUS','OTHER','UNKNOWN']=Field(description=COUNT_RULE)

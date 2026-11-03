@@ -74,14 +74,14 @@ def empty_result():
                 production_admission=False, estimation_handoff_allowed=False)
 
 
-def _fact_request(bundle, binding, reader_id, reference_format, query, contexts, *, assignment_semantics=None, network_fact_contract=None, signed_comparison=False, ordered_target=None, target_contract=None, reviewed_target_context=None, material_inventory=None, reviewed_policy_request=None):
+def _fact_request(bundle, binding, reader_id, reference_format, query, contexts, *, assignment_semantics=None, network_fact_contract=None, observational_fact_profile=None, signed_comparison=False, ordered_target=None, target_contract=None, reviewed_target_context=None, material_inventory=None, reviewed_policy_request=None, reviewed_intent=None):
     # Preserve the public diagnostic before the common registry checks metadata.
     if reader_id == 'VARIABLE_DAG_FACTS' and reference_format not in ('short_refs', 'source_hash'):
         raise ValueError('UNKNOWN_FACT_REFERENCE_FORMAT')
     network = reader_id in ('NETWORK_FIXED_POLICY_FACTS', 'NETWORK_POLICY_CONTRAST_FACTS', 'NETWORK_RANDOMIZED_EFFECT_FACTS', 'NETWORK_OBSERVATIONAL_POLICY_FACTS')
     from cfm_id_llm.fact_reading_contracts import contract_for_entry
     reading_contract = contract_for_entry(dict(reader_id=reader_id,reference_format=reference_format,
-                                              network_fact_contract=network_fact_contract))
+                                              network_fact_contract=network_fact_contract, observational_fact_profile=observational_fact_profile))
     if reading_contract is not None:
         request = reading_contract.request(bundle, binding=binding, assignment_semantics=assignment_semantics,
                                            signed_comparison=signed_comparison, network_fact_contract=network_fact_contract)
@@ -98,7 +98,8 @@ def _fact_request(bundle, binding, reader_id, reference_format, query, contexts,
         raise ValueError('UNKNOWN_FACT_READER')
     focus = {key: query[key] for key in ('query_id', 'business_goal', 'requested_comparison_or_policy', 'semantics')}
     if reviewed_policy_request is not None:
-        if reader_id not in ('NETWORK_FIXED_POLICY_FACTS','NETWORK_POLICY_CONTRAST_FACTS'):
+        from cfm_id_llm.compact_response_contract import policy_focus_readers
+        if reader_id not in policy_focus_readers(reviewed_policy_request['contract']):
             raise ValueError('POLICY_FOCUS_READER_MISMATCH')
         adapter=evidence_contract(reviewed_policy_request['contract'])
         if not hasattr(adapter,'policy_focus'):raise ValueError('POLICY_FOCUS_CONTRACT_REQUIRED')
@@ -114,6 +115,11 @@ def _fact_request(bundle, binding, reader_id, reference_format, query, contexts,
         focus['reviewed_target_context'] = deepcopy(reviewed_target_context)
         if reading_contract is not None and reading_contract.target_context is not None:
             request = reading_contract.target_context.clarify_request(request)
+    if reviewed_intent is not None:
+        from cfm_id_llm.reviewed_intent_handoff import attach
+        request=attach(request,reviewed_intent,binding)
+        # One selected intent instead of duplicate canonical policy aliases.
+        focus=dict(query_id=query['query_id'],reviewed_intent_sha256=reviewed_intent['intent_sha256'])
     method_instruction = ('原文仍以 source_catalog 为准。不要混入其他子问题，也不要判断识别定理是否成立。\n' if network else
                           '原文仍以 source_catalog 为准。不要混入其他子问题，也不要判断后门、调整或前门是否成立。\n')
     request['user'] += ('\n\n本次只读取下面选定子问题。以下定位信息及此前助手提问均不是可引用事实来源；'
@@ -239,18 +245,30 @@ def prepare_reader(intake, query_id, *, query_review=None, reading_revision=None
             if s.a0_response_contract in REVIEWED_TARGET_PROFILES and reader_id=='NETWORK_RANDOMIZED_EFFECT_FACTS' else None)
         material_inventory=None
         policy_request=None
-        if reader_id in ('NETWORK_FIXED_POLICY_FACTS','NETWORK_POLICY_CONTRAST_FACTS') and hasattr(conditioning,'policy_focus'):
+        from cfm_id_llm.compact_response_contract import policy_focus_readers
+        if reader_id in policy_focus_readers(s.a0_response_contract):
             policy_request=dict(contract=s.a0_response_contract,raw_query=deepcopy(s.candidate['queries'][int(query_id[1:])-1]))
         if s.material_handoff is not None:
             from .reading_material_handoff import build,FAMILIES
             if reader_id not in FAMILIES:
                 raise DispatchError('ADAPTER_NOT_CONNECTED','MATERIAL_HANDOFF_NOT_CONNECTED_FOR_READER')
             material_inventory=build(s,query_id,review.model_dump(mode='json'))
+        reviewed_intent=None
+        if getattr(conditioning,'REVIEWED_INTENT_HANDOFF',False):
+            from cfm_id_llm import reviewed_intent_handoff as intent_handoff
+            if reader_id in intent_handoff.READERS:
+                from cfm_id_llm.fact_reading_contracts import contract_for_entry
+                contract=contract_for_entry(dict(reader_id=reader_id,reference_format=s.fact_format,
+                    network_fact_contract=s.network_fact_contract,observational_fact_profile=s.observational_fact_profile))
+                references=contract.reference_catalog(bundle,binding=fact_binding)
+                reviewed_intent=intent_handoff.build(s,query_id,review.model_dump(mode='json'),reader_id,references)
         request=_fact_request(bundle,fact_binding,reader_id,s.fact_format,query,contexts,
                               assignment_semantics=s.assignment_semantics, network_fact_contract=s.network_fact_contract,
+                              observational_fact_profile=s.observational_fact_profile,
                               signed_comparison=evidence_contract(s.a0_response_contract) is not None,ordered_target=ordered_target,
                               target_contract=s.a0_response_contract if ordered_target is not None else None,
-                              reviewed_target_context=target_context,material_inventory=material_inventory,reviewed_policy_request=policy_request)
+                              reviewed_target_context=target_context,material_inventory=material_inventory,reviewed_policy_request=policy_request,
+                              reviewed_intent=reviewed_intent)
         digest = sha(dict(intake=out['intake_sha256'], query_id=query_id,
                           query_review=review.model_dump(mode='json'), request=request))
         entry = dict(out, state='READY_TO_READ', reader_id=reader_id,
@@ -259,6 +277,7 @@ def prepare_reader(intake, query_id, *, query_review=None, reading_revision=None
                     query_review=review.model_dump(mode='json'))
         if material_inventory is not None:entry['material_inventory']=material_inventory
         if policy_request is not None:entry['reviewed_policy_request']=policy_request
+        if reviewed_intent is not None:entry['reviewed_intent']=reviewed_intent
         if s.assignment_semantics is not None:
             entry['assignment_semantics'] = s.assignment_semantics
         if target_context is not None:
@@ -268,7 +287,7 @@ def prepare_reader(intake, query_id, *, query_review=None, reading_revision=None
             # Older protocol receipts keep their original request construction.
             entry['reviewed_local_request']=dict(contract=s.a0_response_contract,raw_query=deepcopy(ordered_target))
         from cfm_id_llm.fact_reading_contracts import contract_for_entry
-        reading_contract = contract_for_entry(dict(entry,network_fact_contract=s.network_fact_contract))
+        reading_contract = contract_for_entry(dict(entry,network_fact_contract=s.network_fact_contract, observational_fact_profile=s.observational_fact_profile))
         if reading_contract is not None:
             entry.update(reading_contract.entry_metadata())
         if s.network_fact_contract is not None and (reading_contract is None or reader_id in ('NETWORK_RANDOMIZED_EFFECT_FACTS','VARIABLE_DAG_FACTS')):
@@ -319,6 +338,14 @@ def inspect_methods(intake, query_id, *, query_review, candidate, request_sha256
     except (ValueError,TypeError,KeyError,AttributeError):
         return dict(empty_result(),reason_code='INVALID_OR_STALE_READING_CHANGE_REVIEW')
     try:
+        if entry.get('reviewed_intent') is not None and source_review is None:
+            from .fact_source_review import prepare
+            try:
+                sheet=prepare(source_entry,candidate)
+            except (ValueError,TypeError,KeyError,AttributeError,ArithmeticError):
+                return _revision_evidence(dict(empty_result(),reason_code='INVALID_REVIEWED_INTENT_FACT_READING'),entry)
+            return _revision_evidence(dict(empty_result(),state='REVIEW_REQUIRED',
+                reason_code='REVIEWED_INTENT_ALIGNMENT_REVIEW_REQUIRED',source_review_worksheet=sheet),entry)
         if entry.get('material_inventory') is not None:
             from .reading_impact_review import VERSION,prepare,pending_assessment,invalid_assessment
             if source_review is None:
@@ -384,6 +411,12 @@ def inspect_methods(intake, query_id, *, query_review, candidate, request_sha256
 
 
 def _revision_evidence(result,entry):
+    if entry.get('reviewed_intent_handoff') is not None:
+        result=dict(result,reviewed_intent_handoff=deepcopy(entry['reviewed_intent_handoff']))
+    if entry.get('reviewed_intent') is not None:
+        result=dict(result,reviewed_intent_handoff=dict(version=entry['reviewed_intent']['version'],
+            intent_sha256=entry['reviewed_intent']['intent_sha256'],
+            alignment_review_required=True,automatic_semantic_match=False,scientific_approval=False))
     assessment=entry.get('reading_assessment') or result.get('reading_assessment')
     if assessment:
         from .reading_impact_review import report_result

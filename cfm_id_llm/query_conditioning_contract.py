@@ -154,6 +154,15 @@ def admission(context, reader_id):
             return 'NEEDS_INPUT', 'TARGET_STANDARDIZATION_UNRESOLVED'
         if state(value) not in ('STATED', 'INTERPRETED'):
             return 'NEEDS_INPUT', 'FIXED_CONDITIONING_TARGET_NOT_ESTABLISHED'
+    elif reader_id == 'NETWORK_POLICY_CONTRAST_FACTS':
+        if state(context['standardization_distribution']) in ('STATED', 'INTERPRETED'):
+            return 'ADAPTER_NOT_CONNECTED', 'STANDARDIZED_CONTRAST_TARGET_NOT_CONNECTED'
+        if state(context['standardization_distribution']) == 'MISSING':
+            return 'NEEDS_INPUT', 'TARGET_STANDARDIZATION_UNRESOLVED'
+        if state(value) == 'MISSING':
+            return 'NEEDS_INPUT', 'FIXED_CONDITIONING_TARGET_NOT_ESTABLISHED'
+        # The contrast adapter requires separate target and conditional-model
+        # reviews before compiling either endpoint. Presence is not approval.
     elif state(value) in ('STATED', 'INTERPRETED'):
         return 'ADAPTER_NOT_CONNECTED', 'CONDITIONED_TARGET_NOT_CONNECTED_TO_SELECTED_READER'
     return None
@@ -172,3 +181,19 @@ def clarify_conditioning_request(request):
 def conditioning_constraints(paths):
     return [dict(field_path=p, description=FACT_DESCRIPTION) for p in dict.fromkeys(paths)
             if p == '/conditioning' or p.startswith('/conditioning/')]
+
+
+CONTRAST_DESCRIPTION = (
+    '核对事实读取 study.context 中的固定背景与本问已审核条件含义一致；'
+    '允许同时保留评价期间，但不能用仅有的期间或“两端背景相同”代替具体条件。'
+    'study.source_ids 必须覆盖该背景。此项只审核目标与来源，不批准条件分配律、总体信息或科学假设。')
+
+
+def preserve_contrast_request(request):
+    """Use the existing study/context wire; do not add a duplicate model field."""
+    return deepcopy(request)
+
+
+def contrast_conditioning_constraints(paths):
+    return [dict(field_path=p, description=CONTRAST_DESCRIPTION) for p in dict.fromkeys(paths)
+            if p in ('/study', '/study/context', '/study/source_ids') or p.startswith('/study/source_ids/')]

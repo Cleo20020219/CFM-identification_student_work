@@ -187,6 +187,9 @@ def make_compact_request(case: BusinessCase, *, assignment_semantics=None, targe
     if a0_response_contract == 'inline-output-guide-1':
         from .compact_output_guide import render
         return render(system,user,catalog)
+    adapter = evidence_contract(a0_response_contract)
+    if adapter is not None and hasattr(adapter, 'render_request'):
+        return adapter.render_request(system, user, catalog)
     return system, user, catalog
 
 

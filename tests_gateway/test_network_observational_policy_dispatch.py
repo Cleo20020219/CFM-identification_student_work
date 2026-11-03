@@ -50,7 +50,8 @@ def test_registered_scope_and_scientific_conditions_match_native_contract():
         assert registry.reader_for('UNIT_NETWORK',kind,assignment_family='OBSERVATIONAL') is None
     assert registry.reader_for('VARIABLE_DAG','INTERVENTIONAL_DISTRIBUTION',assignment_family='OBSERVATIONAL').reader_id=='VARIABLE_DAG_FACTS'
     data=registry.inventory()['separate_native_entries'][0]
-    assert 'R3_FULL_ASSIGNMENT' in data['common_business_routes'] and 'R3_MEAN_SIGNATURE' in data['native_only_routes']
+    assert {bridge.METHOD,bridge.SIGNATURE_METHOD} <= set(data['common_business_routes'])
+    assert bridge.SIGNATURE_METHOD not in data['native_only_routes']
 
 
 def test_formula_in_correlated_non_exposure_sufficient_potential_world():

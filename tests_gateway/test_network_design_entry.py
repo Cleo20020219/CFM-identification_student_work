@@ -308,23 +308,29 @@ def test_recommended_public_entry_all_four_targets_keep_d6_e3_and_replay():
         # Same calendar week is ordinary study context, not a selected W stratum.
         sem['conditioning_context']='UNKNOWN'
         def goal_claim(value):return dict(state='STATED',value=value,refs=list(q['goal']['refs']))
+        # Fixture follows the recommended target-first wire. No returned model
+        # answer is migrated or repaired here.
         if family in ('effect','spillover'):
-            for key in ('intervention','comparator','neighbor_exposure'):sem.pop(key)
+            for key in ('intervention','comparator','neighbor_exposure','policy_assignment'):sem.pop(key,None)
             first,second,shared=(('本店启用','本店未启用','核心合作店严格过半启用') if family=='effect' else
                 ('核心合作店严格过半启用','核心合作店至多一半启用','本店不启用'))
-            q['comparison_request']=dict(reference=goal_claim(second),evaluated=goal_claim(first),
-                quantity='EVALUATED_MINUS_REFERENCE',shared_condition=goal_claim(shared),refs=list(q['goal']['refs']))
+            sem.update(first_arrangement=goal_claim(first),second_arrangement=goal_claim(second),neighbor_exposure=goal_claim(shared))
+            q['comparison_order']=dict(operation='FIRST_MINUS_SECOND',refs=list(q['goal']['refs']))
         else:
             def policy_label(values):return '、'.join(n for n,v in zip(NODES,values) if v)+'启用，其余门店不启用'
-            sem['intervention']=sem['policy_assignment']=goal_claim(policy_label(data['first']))
-            if family=='contrast':sem['comparator']=goal_claim(policy_label(data['second']))
-            q['comparison_order']=dict(operation='NOT_APPLICABLE' if family=='policy' else 'INTERVENTION_MINUS_COMPARATOR',refs=list(q['goal']['refs']))
+            for key in ('intervention','comparator','policy_assignment'):sem.pop(key,None)
+            sem['first_arrangement']=goal_claim(policy_label(data['first']))
+            sem['second_arrangement']=goal_claim(policy_label(data['second'])) if family=='contrast' else 'NOT_APPLICABLE'
+            q['comparison_order']=dict(operation='NOT_APPLICABLE' if family=='policy' else 'FIRST_MINUS_SECOND',refs=list(q['goal']['refs']))
+        from cfm_id_llm.target_first_reading import COMMON_FIELDS
+        raw['common']={k:raw['common'].get(k,'UNRESOLVED' if k=='assignment_family' else 'UNKNOWN') for k in COMMON_FIELDS}
+        sem.update(outcome=deepcopy(raw['common']['outcome']),decision_constraints='UNKNOWN')
         s=intake.receive_candidate(s,raw,request_sha256=s.request_sha256)
         review=submit(s,record(sheet(s)))['query_review']
         e=dispatch.prepare_reader(s,'q1',query_review=review)
         assert e['state']=='READY_TO_READ',e
         facts=fact_reference(e,data)
-        if family in ('effect','spillover'):
+        if family in ('effect','spillover') and e.get('effect_fact_contract')=='network-scoped-effect-reading-1':
             t=facts['target'];t['evaluated']=t.pop('first');t['reference']=t.pop('second');t.pop('operation');t.pop('kind')
             facts['version']=e['effect_fact_contract'];facts['assignment']['definition_refs']=['study'];t['definition_refs']=['study']
             for arm in ('reference','evaluated'):t[arm]['definition_refs']=['study','exposure']

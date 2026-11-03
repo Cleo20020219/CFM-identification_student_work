@@ -7,7 +7,11 @@ description: 从业务问题、研究方案和数据说明提取待审核的因�
 
 交付忠实于材料的目标与证据草稿。保留业务人员的问法，不要求用户先选定理或填写数学 JSON，不以送入 POINT 为目标。
 
-- **已有系统请求、Schema、来源目录**：按当前合同生成完整候选；不要把本 Skill 再当一套输出格式。核对目标、字段归属、确定性状态和实际引用；细节以当前 Schema 为准。
+当前状态：按项目负责人的选择，`project.start` 使用 `target-first-skill-1` 作为主维护入口；旧API默认保留兼容。已接网络意图交接及强制一致性审核，不代表真实LLM准确率已经稳定。前序对照见[实验记录](../../docs/SKILL_READING_ACCEPTANCE_ZH.md)，当前行为见[意图交接](../../docs/REVIEWED_INTENT_HANDOFF_ZH.md)。
+
+- **API 模型实际加载的 Skill**：`target-first-skill-1` 会将[模型读取 Skill](../../cfm_id_llm/resources/causal_business_reading/SKILL.md)全文装入请求，并从实际 Schema 生成格式速查。该资源与安装包一起分发，是这个配置唯一的模型 Skill 内容；本入口负责宿主操作，不再重复注入。其他配置没有因文件存在就自动加载此 Skill。每轮保存实际请求与加载清单，不能把“仓库有 Skill”计为“已调用 Skill”。
+
+- **已有系统请求、Schema、来源目录**：按当前合同生成完整候选；不要把本 Skill 再当一套输出格式。若调用方选择 `guided-policy-reading-1`，请求已装入[政策读取步骤](../../cfm_id_llm/resources/business_reading_workflow.md)，无需重复附加；其他合同仍按自身字段归属执行，不能照搬单主字段规则。
 - **直接审阅业务与数据**：读[业务核对要点](references/reading-checklist.md)，给出“要评价什么、如何比较、已有什么信息、关键缺项”的简洁草稿。没有实际运行接口时标为待审核。
 - **接入或执行仓库流程**：读[运行接口](references/runtime.md)，用现有代码生成请求、保存原答和审核工作表。模型需要宿主提供工具才能执行这些步骤；仅附加本文件不会自动执行。
 

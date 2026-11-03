@@ -45,7 +45,9 @@ intake.write_json("reading_report.json", intake.inspect(session))
 
 网络事实可显式调用 `cfm_id.fact_source_review.prepare(entry, raw)` 生成来源工作表，也可使用 `cfm-id-dispatch source-review-plan`。独立完成的 `source_review` 记录须传入计划、执行和对应整题子问；参见 `docs/FACT_SOURCE_REVIEW_ZH.md`。它不自动批准：读错返回显式复查，真实缺项走追问，真实额外限制仍保留给方法检查。
 
-`organized-reading-1` 是已完成小规模对照的请求组织实验选项，保持 `query-conditioning-1` 的 Schema、字段定义和审核，只改变 A0 系统说明；未显示增益，不替代默认。它也必须传递已审核的逐问固定背景。不能因编号较新而自动选用。对照没有提供远端文件工具、没有拼接 Skill 全文；工具辅助 Skill 的效果须另测，见 `docs/ORGANIZED_READING_ACCEPTANCE_ZH.md`。
+`organized-reading-1` 是已完成小规模对照的请求组织实验选项，保持 `query-conditioning-1` 的 Schema、字段定义和审核，只改变 A0 系统说明；未显示增益，不替代默认。它也必须传递已审核的逐问固定背景。不能因编号较新而自动选用。对照没有提供远端文件工具、没有拼接 Skill 全文；工具辅助 Skill 的效果须另测，见 `docs/history/ORGANIZED_READING_ACCEPTANCE_ZH.md`。
+
+`guided-policy-reading-1` 是另一项显式实验：使用包内 `cfm_id_llm/resources/business_reading_workflow.md`，复用单一主政策合同，并让 R3 同样接收一份已审核政策。不要再次追加这段工作流。它不提供远端文件或审核工具。新业务对照未显示增益，因此仍不替代推荐配置；真实调用后只修正了候选 Schema 的背景状态规则，未继续调整提示词，也未把离线修复算作新的模型成绩。详见 `docs/GUIDED_POLICY_READING_ACCEPTANCE_ZH.md`。
 
 复查走 `intake_reading_revision` 或 `fact_reading_revision`：提交来源定位，保留原答，独立审核所有变化；不把参考答案或私有评分理由发送给模型。条件缺失走澄清材料流程，不能用重读替代负责人答复。
 

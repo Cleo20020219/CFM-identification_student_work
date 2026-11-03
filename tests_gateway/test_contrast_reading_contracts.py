@@ -23,7 +23,10 @@ KINDS=('point','r2','partial','cancellation')
 
 
 def configured_comparison(kind,profile=None):
-    return r2.setup(profile=profile) if kind=='r2' else example.setup(kind,profile=profile)
+    from tests_gateway._reading_contract_checks import current_fixture
+    s,e,o=r2.setup(profile=profile) if kind=='r2' else example.setup(kind,profile=profile)
+    o['candidate']=current_fixture(e,o['candidate'])
+    return s,e,o
 
 
 @pytest.fixture(scope='module')
@@ -41,7 +44,8 @@ def test_registered_pair_uses_existing_config_schema_parser_and_direction_help(p
     assert c.reader_id==native.FAMILY and c.model is model_for(e) is reading.reading_model(profile)
     assert c.make_request.func is reading.make_request and c.parse.func is reading.parse
     assert c.make_request.keywords==c.parse.keywords=={'profile':profile}
-    assert c.wire_version==reading.VERSION and c.profile==profile and c.target_context is None
+    assert c.wire_version==reading.VERSION and c.profile==profile and c.target_context is not None
+    assert c.target_context.clarify_request(e['request'])==e['request']
     assert c.clarify_comparison is clarify_fact_order
     assert c.entry_metadata()==({'network_fact_contract':profile} if profile else {})
     for assignment in (None,'joint-assignment-law-1'):
@@ -53,13 +57,19 @@ def test_registered_pair_uses_existing_config_schema_parser_and_direction_help(p
     assert revision._references(e)==c.reference_catalog(e['bundle'],binding=e['fact_binding_sha256'])
     actual_constraints=revision._public_constraints(e,[''])
     base_constraints=network_fact_protocol(profile).public_constraints([''],request=e['request'])
-    if profile=='network-source-selections-mean-orders-1':
+    from cfm_id_llm.network_mean_order_reading import PROFILES as ORDER_PROFILES
+    from cfm_id_llm import mean_order_ownership as ownership
+    if profile in ORDER_PROFILES:
         # The new profile appends its schema-derived rules; old protocol rules stay intact.
         assert actual_constraints[:len(base_constraints)]==base_constraints
         extra=actual_constraints[len(base_constraints):]
         schema=json.JSONDecoder().raw_decode(e['request']['user'])[0]['output_schema']
         claim_schema=schema['$defs']['OrderClaim']
-        assert extra and all(r['field_path'].startswith('/mean_order_model') for r in extra)
+        assert extra and all(r['field_path'].startswith('/mean_order_model') or
+            (profile==ownership.PROFILE and r['field_path'] in ownership.ROLES) for r in extra)
+        if profile==ownership.PROFILE:
+            assert all(any(r['field_path']==path and r.get('description')==description for r in extra)
+                       for path,description in ownership.ROLES.items())
         rule=next(r for r in extra if r.get('error_code')=='NOT_ASSUMED_HAS_NO_LICENSED_LEVEL_OR_SCOPE')
         assert rule['field_path']=='/mean_order_model/order_reading/claims/*'
         assert rule['combination']==claim_schema['allOf'][0]

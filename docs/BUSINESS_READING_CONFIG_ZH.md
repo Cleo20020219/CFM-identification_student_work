@@ -10,20 +10,26 @@
   "assignment_semantics": "joint-assignment-law-1",
   "target_summary_contract": "target-summary-3",
   "a0_reference_contract": "compact-source-paragraphs-1",
-  "a0_response_contract": "query-conditioning-1",
-  "network_fact_contract": "network-source-selections-mean-orders-1"
+  "a0_response_contract": "target-first-skill-1",
+  "network_fact_contract": "network-shared-definitions-1"
 }
 ```
 
-本次推荐配置沿用已有 alignment 组件，为两政策差值增加可选均值顺序 Schema；System Prompt 不改写。旧 alignment profile 保留原请求和解析。见[均值顺序接入](NETWORK_MEAN_ORDER_ENTRY_ZH.md)。选择的理由是保留逐问背景、目标、比较方向和来源审核的既有合同；**不是“版本最大所以最好”，也没有证明是准确率最高的组合**。局部效应和 DAG 按已审目标选择自己的事实协议，这一网络配置并非所有家族的说明开关。
+2026-11-02 按项目负责人的选择，将目标优先的新候选作为主维护方案。A0 使用已固定的简短 Skill 与 Schema；本轮没有继续调整它们。政策均值、两政策差值、局部效应和观察性政策的事实读取接收一份带原文位置的已审核意图，必须经过来源与跨阶段一致性审核才能进入原有数学入口。详见[意图交接](REVIEWED_INTENT_HANDOFF_ZH.md)。这是开发和使用入口的收拢，不是准确率已稳定的声明。
+
+2026-11-03，固定政策均值和两政策差值改用 `network-shared-definitions-1`：共同定义集中审核，网络证据独立列出，每条概率、政策、信息与科学条件仍须提供自己的证据。均值顺序能力保留。局部效应、R3 和 DAG 继续使用各自专门协议；DAG暂不使用本次网络意图交接。不会把未支持目标改成固定政策，也不会失败后静默换回旧A0。当前真实验收配置和边界见[共同定义验收](SHARED_DEFINITION_ACCEPTANCE_ZH.md)。
 
 ## 三种配置的地位
+
+R3新增能力的本地验收使用`observational_fact_profile="mean-signature"`，详见[R3合同](R3_POLICY_ENTRY_CONTRACT_ZH.md)。它允许同一家族读取显式暴露定义和条件均值充分性；本轮不改变上面的统一推荐配置，也不改写历史记录。只有先通过独立审核及原生验证才能使用签名路线；尚未据此声称真实LLM首读稳定。
+
+需要逐表显式引用对象顺序和编码时，可选 `mean-signature-definitions`；它与旧签名配置使用同一数学入口，新增内容只涉及定义依赖的读取与审核。仍是显式验收选项，不根据名称或日期自动替换推荐配置；小批真实复测未证明首读稳定。
 
 | 地位 | 位置 | 使用规则 |
 |---|---|---|
 | 唯一推荐起点 | `cfm_id/configuration/reading.json` | 新会话由 `project.start` 加载；学生不自行拼装 |
 | 历史兼容默认 | `ReadingConfig()`、[compatibility_default.json](../examples/legacy/configs/compatibility_default.json) | 旧 API、旧 CLI 默认不改，继续重建旧请求；不是学生推荐起点 |
-| 实验或历史配置 | 旧协议说明（历史记录不随发布）、`examples/legacy/configs/previous_research.json` | 只用于明确的比较或复现；必须连同当时请求、回答和审核使用 |
+| 实验或历史配置 | 旧协议说明（历史记录不随发布）、`examples/legacy/configs/previous_research.json` | 只用于明确的比较或复现；必须连同当时请求、回答和审核使用。旧A0停止新增优化，必要兼容和正确性修复仍维护 |
 
 `network-policy-definition-refs-1`、`network-policy-record-definitions-1`、`organized-reading-1` 等保留为实验配置，本次不提升默认。第二项补齐科学条件覆盖名单的显式定义依赖，见[共同读取登记](FACT_READING_REGISTRY_ZH.md#可选的政策定义引用样板)；少量事实读取对照通过不代表完整 A0 链路稳定。旧协议的内部标识参与绑定，不能因清理文件名而改写，也不能给旧会话自动套新配置。
 
@@ -32,6 +38,10 @@
 本地接口对照另有 `single-action-target-1`（A0 主政策单一归属）与 `network-policy-scopes-1`（信息范围和状态引用配对）。两者仍为显式实验配置，见[读取登记](FACT_READING_REGISTRY_ZH.md#主政策记录范围和状态引用的接口对照)。不得把历史回答删除重复字段后当成新协议模型成绩；需用新请求重新读取。这些历史读取实验未替换推荐配置；本次均值顺序 Schema 扩展见上文。
 
 候选 `single-action-target-2` 仅增加精确重复别名兼容，并向事实阶段交接单份已审核意图。其与材料清单的冻结验收尚未通过完整真实链路，因此不替换推荐起点。阶段职责、兼容界限及实际失败见[政策交接](POLICY_STAGE_OWNERSHIP_ZH.md)与[冻结验收](CONTRACT_CLOSURE_ACCEPTANCE_ZH.md)。
+
+`guided-policy-reading-1` 复用该单一主政策合同，集中读取步骤，并将已审核政策交接扩展到 R3。2026-11-01 的四份新材料对照没有显示首读增益，**不作为推荐配置**。调用结束后仅补齐候选 Schema 与背景解析规则的一处差异，未重新计分。见[冻结对照、接口修复与停止决定](GUIDED_POLICY_READING_ACCEPTANCE_ZH.md)。
+
+`model-policy-output-1` 进一步把固定政策主字段与旧兼容别名分开：模型只填主字段，适配器生成旧接口视图；旧协议原样保留。本轮少量真实验收仍有读取错误，因此也不自动替换推荐配置。具体职责、兼容规则和验收见[政策字段分离](POLICY_STAGE_OWNERSHIP_ZH.md#模型输出和兼容视图分开)。普通用户仍从 `project.start` 开始，无需按版本号挑配置。
 
 后续显式候选 `network-policy-scopes-2` 将“未声明假设的定义依赖”统一到 Schema、解析、来源审核和诊断。固定政策均值及两政策差值共同使用；旧协议和推荐配置不变。[共同规则与验收](ASSUMPTION_DEPENDENCY_CONTRACT_ZH.md)记录了改善及限制，本次事实阶段复测不替代完整 A0 验收。
 

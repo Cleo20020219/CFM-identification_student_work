@@ -66,7 +66,11 @@ def _worksheet(value, query_id, authority):
             evidence_mode='DECLARED_ENUM_BASIS' if rule.shape=='enum' else 'THIS_FIELD_ONLY')
 
     common = raw.get('common', {})
+    evidence = evidence_contract(s.a0_response_contract)
+    deferred = getattr(evidence, 'DEFERRED_COMMON', ())
     for rule in contract.COMMON:
+        if rule.name in deferred:
+            continue  # Owned and independently reviewed by the fact stage.
         path = 'common.'+rule.name; value = common.get(rule.name)
         if rule.shape == 'claims' and value:
             for i,c in enumerate(value): add(rule, f'{path}[{i}]', c, True)

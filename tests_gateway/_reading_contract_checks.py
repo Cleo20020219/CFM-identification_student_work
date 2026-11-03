@@ -10,6 +10,16 @@ from jsonschema import Draft202012Validator
 
 NATIVE_PROFILES = (None, 'network-source-selections-alignment-1')
 
+def current_fixture(entry, candidate):
+    """Author current-wire fixtures; never used for live model answers."""
+    from cfm_id_llm import shared_fact_definitions as shared
+    raw=deepcopy(candidate)
+    if entry.get('network_fact_contract')==shared.PROFILE:
+        raw['study']['network_source_ids']=list(raw['study']['source_ids'])
+        reverse={v:k for k,v in shared.LAW_NAMES.items()}
+        for info in raw['information']:info['operator']=reverse.get(info['operator'],info['operator'])
+    return raw
+
 
 def validate_candidate(entry, candidate):
     body = json.JSONDecoder().raw_decode(entry['request']['user'])[0]

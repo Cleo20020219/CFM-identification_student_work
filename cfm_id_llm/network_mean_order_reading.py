@@ -10,6 +10,8 @@ from cfm_id.mean_order_reading import project
 from .mean_order_field_contract import OrderReading, COMPLETE_MODEL
 
 PROFILE = 'network-source-selections-mean-orders-1'
+from .mean_order_ownership import PROFILE as OWNERSHIP_PROFILE
+PROFILES = (PROFILE, OWNERSHIP_PROFILE, 'network-shared-definitions-1')
 
 
 class CompleteOrderModelDeclaration(Declaration):

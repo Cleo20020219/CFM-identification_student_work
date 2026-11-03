@@ -135,3 +135,183 @@ def test_recheck_rebuilds_same_intent_without_reusing_old_approvals(tmp_path):
     assert '原材料交接清单' in fresh['request']['user']
     assert not d.execute(s,'q1',**dict(o,request_sha256=fresh['request_sha256'],reading_revision=fresh['reading_revision']),**a)['backend_called']
     path=tmp_path/'intake.json';intake.save(s,path);assert intake.restore(path)==s
+
+
+def guided_observational(*, profile=None, **kwargs):
+    from tests_gateway.test_query_conditioning_contract import draft
+    from examples.network_observational_policy_reference import fact_reference
+    from cfm_id_llm.guided_policy_reading import CONTRACT
+    case,data,raw=draft(**kwargs)
+    raw['queries'][0]['semantics']['intervention']=raw['queries'][0]['semantics'].pop('policy_assignment')
+    s=receive(case,raw,profile=profile or CONTRACT)
+    q=submit(s,record(sheet(s)))['query_review'];e=d.prepare_reader(s,'q1',query_review=q)
+    assert e['state']=='READY_TO_READ',e
+    return s,e,dict(query_review=q,candidate=fact_reference(e,data),request_sha256=e['request_sha256'])
+
+
+@pytest.mark.parametrize('kwargs,expected',[
+    ({},'POINT'),({'exchangeability':None},'NEEDS_INPUT'),
+    ({'exchangeability':False},'ADAPTER_NOT_CONNECTED'),({'sample_only':True},'NEEDS_INPUT')])
+def test_guided_owner_reaches_r3_without_granting_science(kwargs,expected):
+    s,e,o=guided_observational(**kwargs);original=deepcopy(s.candidate)
+    focus=json.JSONDecoder().raw_decode(e['request']['user'].split('本次只读取下面选定子问题。')[1].split('\n',1)[1])[0]['focus']
+    assert 'reviewed_policy_target' in focus and 'semantics' not in focus
+    assert 'policy_assignment' not in json.dumps(focus)
+    assert not focus['reviewed_policy_target']['scientific_approval']
+    assert e['reviewed_target_context']['conditioning_context']==original['queries'][0]['semantics']['conditioning_context']
+    from cfm_id import fact_source_review as source
+    from tests_gateway.test_fact_source_review import record as source_record
+    o['source_review']=source_record(source.prepare(e,o['candidate']))
+    plan=d.inspect_methods(s,'q1',**o)
+    a=approval_records(plan) if plan.get('methods') else dict(research_protocol_selected=True)
+    result=d.execute(s,'q1',**o,**a)
+    assert result['state']==expected and result['independent_replay']==(expected=='POINT')
+    assert s.candidate==original
+
+
+def test_guided_r3_recheck_retains_owner_and_rejects_previous_sources():
+    s,e,o=guided_observational()
+    w=revision.prepare_recheck(s,'q1',**o)['feedback_worksheet']
+    fresh=revision.prepare_recheck(s,'q1',**o,feedback=feedback(w,path='/target',doc='study'))
+    assert fresh['reviewed_policy_request']==e['reviewed_policy_request']
+    assert 'reviewed_policy_target' in fresh['request']['user']
+    assert fresh['fact_binding_sha256']!=e['fact_binding_sha256']
+    assert not d.execute(s,'q1',**dict(o,request_sha256=fresh['request_sha256'],reading_revision=fresh['reading_revision']),research_protocol_selected=True)['backend_called']
+
+
+def test_guided_wire_keeps_existing_alias_and_schema_rules():
+    from cfm_id_llm.guided_policy_reading import CONTRACT
+    from cfm_id_llm.compact_formulator import make_compact_request
+    case,raw=a0_case()
+    a=make_compact_request(case,a0_response_contract=compat.CONTRACT)
+    b=make_compact_request(case,a0_response_contract=CONTRACT)
+    old_schema=split_user(a[1])[2];new_schema=deepcopy(split_user(b[1])[2])
+    new_schema['$defs'].pop('GuidedConditioningClaim')
+    for name in ('CompactSemantics','OrderedLocalSemantics','PolicyActionSemantics'):
+        new_schema['$defs'][name]['properties']['conditioning_context']=deepcopy(
+            old_schema['$defs'][name]['properties']['conditioning_context'])
+    assert old_schema==new_schema
+    assert a[0]!=b[0]
+    s=receive(case,raw,profile=CONTRACT)
+    assert 'report' in intake.inspect(s)
+    bad=deepcopy(raw);bad['queries'][0]['semantics'].pop('intervention')
+    missing=receive(case,bad,profile=CONTRACT)
+    assert 'report' not in intake.inspect(missing)
+    with pytest.raises(intake.IntakeError):
+        intake.prepare_request(s.model_copy(update={'a0_response_contract':compat.CONTRACT}))
+
+
+@pytest.mark.parametrize('kind,valid',[
+    ('unknown_string',True),('unknown_empty',True),('unknown_refs',False),
+    ('unknown_value',False),('implicit_unknown_refs',False),
+    ('known',True),('known_no_refs',False),('known_blank',False),('duplicate_refs',False)])
+def test_guided_conditioning_schema_and_parser_agree_without_answer_repair(kind,valid):
+    from cfm_id_llm.guided_policy_reading import CONTRACT
+    case,raw=a0_case();ref=raw['queries'][0]['semantics']['intervention']['refs'][0]
+    values={
+        'unknown_string':'UNKNOWN','unknown_empty':dict(state='UNKNOWN',value=None,refs=[]),
+        'unknown_refs':dict(state='UNKNOWN',value=None,refs=[ref]),
+        'unknown_value':dict(state='UNKNOWN',value='未指定背景',refs=[]),
+        'implicit_unknown_refs':dict(refs=[ref]),
+        'known':dict(state='STATED',value='原文指定背景',refs=[ref]),
+        'known_no_refs':dict(state='STATED',value='原文指定背景',refs=[]),
+        'known_blank':dict(state='STATED',value='   ',refs=[ref]),
+        'duplicate_refs':dict(state='STATED',value='原文指定背景',refs=[ref,ref]),
+    }
+    raw['queries'][0]['semantics']['conditioning_context']=values[kind]
+    s=receive(case,raw,profile=CONTRACT);before=deepcopy(s.candidate)
+    schema=split_user(intake.prepare_request(s)['user_prompt'])[2]
+    assert Draft202012Validator(schema).is_valid(s.candidate)==valid
+    assert ('report' in intake.inspect(s))==valid
+    assert s.candidate==before
+
+
+def test_model_policy_output_separates_generated_view_from_old_client_alias(tmp_path):
+    from cfm_id_llm import model_policy_output as model
+    from cfm_id import intake_reading_revision as a0_revision
+    from tests_gateway.test_reading_review_guards import feedback as a0_feedback
+    for family in ('policy','contrast'):
+        case,raw=a0_case(family);s=receive(case,raw,profile=model.CONTRACT)
+        before=deepcopy(s.candidate);request=intake.prepare_request(s)
+        schema=split_user(request['user_prompt'])[2];Draft202012Validator.check_schema(schema)
+        Draft202012Validator(schema).validate(before)
+        assert 'policy_assignment' not in schema['$defs']['PolicyActionSemantics']['properties']
+        assert 'CompactQuery' not in schema['$defs']  # unused legacy output branch
+        # This field remains meaningful for other policy goal types.
+        assert 'policy_assignment' in schema['$defs']['CompactSemantics']['properties']
+        report=intake.inspect(s);projection=report['wire_gate']['policy_action_projection']
+        assert projection['compatibility_view_generated'] and not projection['alias_accepted_from_model']
+        sem=report['report']['draft']['queries'][0]['semantics']
+        assert sem['intervention']==sem['policy_assignment']
+        w=sheet(s);assert 'queries.q1.semantics.policy_assignment' not in w['fields']
+        assert w['fields']['queries.q1.semantics.intervention']['actual_citations']
+        q=submit(s,record(w))['query_review']
+        fw=a0_revision.prepare_recheck(s,authority='SYNTHETIC_TEST')['feedback_worksheet']
+        f=a0_feedback(fw);f['issues'][0]['field_path']='/queries/0/semantics/intervention'
+        reread=a0_revision.prepare_recheck(s,authority='SYNTHETIC_TEST',feedback=f)
+        assert d.prepare_reader(reread,'q1',query_review=q)['state']!='READY_TO_READ'
+        assert 'policy_assignment' not in split_user(intake.prepare_request(reread)['user_prompt'])[2]['$defs']['PolicyActionSemantics']['properties']
+        alias=deepcopy(raw);alias['queries'][0]['semantics']['policy_assignment']=deepcopy(alias['queries'][0]['semantics']['intervention'])
+        new=receive(case,alias,profile=model.CONTRACT)
+        assert 'report' not in intake.inspect(new)
+        assert not Draft202012Validator(schema).is_valid(new.candidate)
+        assert 'report' in intake.inspect(receive(case,alias,profile=compat.CONTRACT))
+        assert any(x['error_code']=='POLICY_DUPLICATE_OWNER_FORBIDDEN' for x in diagnose(case,alias,response_contract=model.CONTRACT))
+        path=tmp_path/f'{family}.json';intake.save(s,path);assert intake.restore(path)==s
+        assert before==s.candidate
+
+
+def test_model_policy_output_preserves_unknown_refusal_and_source_review():
+    from cfm_id_llm.model_policy_output import CONTRACT
+    case,raw=a0_case();unknown=deepcopy(raw)
+    unknown['queries'][0]['semantics']['intervention']='UNKNOWN'
+    s=receive(case,unknown,profile=CONTRACT);r=intake.inspect(s)
+    sem=r['report']['draft']['queries'][0]['semantics']
+    assert sem['policy_assignment']['value'] is None and sem['intervention']['value'] is None
+    assert not any(x['field']=='policy_assignment' for x in r['wire_gate']['proposed_business_questions'])
+    for defect in ('missing','foreign_source'):
+        bad=deepcopy(raw)
+        if defect=='missing':bad['queries'][0]['semantics'].pop('intervention')
+        else:bad['queries'][0]['semantics']['intervention']['refs']=['foreign']
+        s=receive(case,bad,profile=CONTRACT,short=False)
+        assert 'report' not in intake.inspect(s) and d.prepare_reader(s,'q1')['request'] is None
+    s=receive(case,raw,profile=CONTRACT);w=sheet(s)
+    for axis in ('field_role','value_state','source_coverage'):
+        review=record(w);review['decisions']['queries.q1.semantics.intervention'][axis]='REJECTED'
+        assert submit(s,review)['state']=='CHECK_BLOCKED'
+
+
+@pytest.mark.parametrize('kind',['point','partial'])
+def test_model_policy_output_keeps_joint_difference_math_and_replay(kind):
+    from cfm_id_llm.model_policy_output import CONTRACT
+    from examples import network_contrast_dispatch_reference as contrast
+    from tests_gateway.test_inline_evidence_slots import wire
+    from cfm_id import fact_source_review as source
+    from tests_gateway.test_fact_source_review import record as source_record
+    case,data=contrast.material(kind)
+    raw=wire(contrast.a0_reference(case),operation='INTERVENTION_MINUS_COMPARATOR')
+    sem=raw['queries'][0]['semantics'];sem['intervention']=sem.pop('policy_assignment');sem['conditioning_context']='UNKNOWN'
+    s=receive(case,raw,profile=CONTRACT)
+    s=intake.configure_network_fact_contract(s,'network-source-selections-mean-orders-1')
+    q=submit(s,record(sheet(s)))['query_review'];e=d.prepare_reader(s,'q1',query_review=q)
+    facts=contrast.fact_reference(e,data);before=deepcopy(facts)
+    o=dict(query_review=q,candidate=facts,request_sha256=e['request_sha256'],source_review=source_record(source.prepare(e,facts)))
+    p=d.inspect_methods(s,'q1',**o);result=d.execute(s,'q1',**o,**approval_records(p))
+    assert result['state']==kind.upper() and result['independent_replay'] and facts==before
+    if kind=='partial':assert result['mathematical_claim']['sharp']
+    rejected=deepcopy(o);rejected['candidate']['scientific_statements']['consistency']['status']='UNDECIDED'
+    assert not d.execute(s,'q1',**rejected,research_protocol_selected=True)['backend_called']
+
+
+def test_model_policy_output_r3_positive_missing_and_refused_conditions():
+    from cfm_id_llm.model_policy_output import CONTRACT
+    from cfm_id import fact_source_review as source
+    from tests_gateway.test_fact_source_review import record as source_record
+    for kwargs,expected in [({},'POINT'),({'exchangeability':None},'NEEDS_INPUT'),
+                            ({'exchangeability':False},'ADAPTER_NOT_CONNECTED'),({'sample_only':True},'NEEDS_INPUT')]:
+        s,e,o=guided_observational(profile=CONTRACT,**kwargs)
+        o['source_review']=source_record(source.prepare(e,o['candidate']))
+        plan=d.inspect_methods(s,'q1',**o)
+        args=approval_records(plan) if plan.get('methods') else dict(research_protocol_selected=True)
+        result=d.execute(s,'q1',**o,**args)
+        assert result['state']==expected and result['independent_replay']==(expected=='POINT')

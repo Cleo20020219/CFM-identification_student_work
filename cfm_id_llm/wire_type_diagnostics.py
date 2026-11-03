@@ -62,8 +62,11 @@ def diagnose(entry, candidate):
             if entry.get('network_fact_contract') == 'network-policy-scopes-2':
                 from .policy_assumption_dependencies import validation_diagnostic
                 row.update(validation_diagnostic(error))
-            if entry.get('network_fact_contract') == 'network-source-selections-mean-orders-1':
+            if entry.get('network_fact_contract') in ('network-source-selections-mean-orders-1', 'network-source-selections-mean-orders-2'):
                 from .mean_order_field_contract import validation_diagnostic
+                row.update(validation_diagnostic(error))
+            if entry.get('observational_fact_profile') == 'mean-signature-definitions':
+                from .network_observational_definitions import validation_diagnostic
                 row.update(validation_diagnostic(error))
             rows.append(row)
         return rows

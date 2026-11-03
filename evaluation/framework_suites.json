@@ -20,6 +20,7 @@
         "tests_gateway/test_compact_output_guide.py",
         "tests_gateway/test_explicit_field_roles.py",
         "tests_gateway/test_target_shape_contract.py",
+        "tests_gateway/test_target_first_skill.py",
         "tests_gateway/test_business_reading_config.py",
         "tests_gateway/test_business_field_review.py",
         "tests_gateway/test_compact_sections.py",
@@ -63,6 +64,8 @@
         "tests_gateway/test_source_dependencies.py",
         "tests_gateway/test_reading_alignment_contract.py",
         "tests_gateway/test_ordered_target_handoff.py",
+        "tests_gateway/test_reviewed_intent_handoff.py",
+        "tests_gateway/test_target_first_native_compatibility.py",
         "tests_gateway/test_requested_change_contract.py",
         "tests_gateway/test_role_effect_reading.py",
         "tests_gateway/test_owned_effect_reading.py",
@@ -80,7 +83,9 @@
         "tests_gateway/test_reading_material_handoff.py",
         "tests_gateway/test_policy_stage_ownership.py",
         "tests_gateway/test_assumption_dependency_contract.py",
-        "tests_gateway/test_mean_order_field_contract.py"
+        "tests_gateway/test_mean_order_field_contract.py",
+        "tests_gateway/test_mean_order_ownership.py",
+        "tests_gateway/test_shared_fact_definitions.py"
       ]
     },
     {
@@ -118,7 +123,9 @@
         "tests_gateway/test_contrast_method_diagnostics.py",
         "tests_gateway/test_effect_method_diagnostics.py",
         "tests_gateway/test_observational_method_diagnostics.py",
-        "tests_gateway/test_network_mean_order_dispatch.py"
+        "tests_gateway/test_network_mean_order_dispatch.py",
+        "tests_gateway/test_observational_signature_entry.py",
+        "tests_gateway/test_contrast_conditioning.py"
       ]
     },
     {
@@ -175,13 +182,16 @@
         "tests_gateway/test_network_dispatch.py::test_finite_samples_are_not_population_laws",
         "tests_gateway/test_fact_source_review.py::test_parent_or_reviewer_citations_do_not_repair_child_coverage",
         "tests_gateway/test_student_handoff.py::test_recommended_entry_uses_one_config_without_changing_legacy_defaults",
+        "tests_gateway/test_reviewed_intent_handoff.py::test_missing_target_and_unapproved_a0_do_not_get_handoff",
         "tests_gateway/test_student_handoff.py::test_all_five_reader_families_have_one_component_owner",
         "tests_gateway/test_method_diagnostics.py::test_read_only_entry_uses_native_gates_and_does_not_create_approval",
         "tests_gateway/test_contrast_method_diagnostics.py::test_readonly_public_entry_uses_registry_and_actual_pair_reviews",
         "tests_gateway/test_effect_method_diagnostics.py::test_readonly_entry_and_saved_evidence_never_invoke_a_backend",
         "tests_gateway/test_observational_method_diagnostics.py::test_readonly_entry_uses_existing_gates_without_reexecuting_or_granting_permission",
         "tests_gateway/test_network_mean_order_dispatch.py::test_extension_is_source_reviewable_and_legacy_profiles_remain_strict",
-        "tests_gateway/test_mean_order_field_contract.py::test_not_assumed_schema_parser_and_diagnostic_agree"
+        "tests_gateway/test_mean_order_field_contract.py::test_not_assumed_schema_parser_and_diagnostic_agree",
+        "tests_gateway/test_observational_signature_entry.py::test_signature_zero_support_is_no_nonidentification_proof",
+        "tests_gateway/test_mean_order_ownership.py::test_request_schema_review_and_recheck_share_one_owner"
       ]
     },
     "chain": {
@@ -195,6 +205,7 @@
         "tests_gateway/test_network_observational_policy_dispatch.py",
         "tests_gateway/test_network_r2_contrast.py",
         "tests_gateway/test_business_case.py",
+        "tests_gateway/test_reviewed_intent_handoff.py",
         "tests_gateway/test_fact_reading_revision.py",
         "tests_gateway/test_fact_source_review.py",
         "tests_gateway/test_network_contrast_dispatch.py::test_each_independent_review_layer_blocks_all_math",
@@ -220,7 +231,11 @@
         "tests_gateway/test_effect_method_diagnostics.py",
         "tests_gateway/test_observational_method_diagnostics.py",
         "tests_gateway/test_network_mean_order_dispatch.py",
-        "tests_gateway/test_mean_order_field_contract.py"
+        "tests_gateway/test_mean_order_field_contract.py",
+        "tests_gateway/test_observational_signature_entry.py",
+        "tests_gateway/test_mean_order_ownership.py",
+        "tests_gateway/test_contrast_conditioning.py",
+        "tests_gateway/test_shared_fact_definitions.py"
       ]
     }
   }

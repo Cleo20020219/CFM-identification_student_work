@@ -29,7 +29,8 @@
   ],
   "tests": [
     "tests/test_observational_r3_and_signature_diagnostics.py",
-    "tests_gateway/test_network_observational_policy_dispatch.py"
+    "tests_gateway/test_network_observational_policy_dispatch.py",
+    "tests_gateway/test_observational_signature_entry.py"
   ],
   "path_base": "source repository root",
   "audit_date": "2026-10-31",

@@ -1,5 +1,13 @@
 # 网络事实的来源审核
 
+## 2026-11-01：错误类型与识别影响分别报告
+
+严格来源审核新增 `source_review_diagnostics`：把 `MEANING_OR_FIELD_ROLE`（含义、状态或字段归属被拒绝）与 `CITATION_COVERAGE_ONLY`（仅引用覆盖被拒绝）分开。它是诊断，不改变审核结论、请求绑定、科学许可或数学调用；原始回答不修补。
+
+“仅引用失败”不自动等于“无关说明”。当前 `/study` 同时包含节点、变量与研究背景，`study.context` 会进入数学目标及绑定。记录级审核只拒绝 `/study` 时，程序不能断言错误在无关文字，也不能断言数学值一定错；诊断明确标为 `MIXED_STUDY_RECORD_CONTEXT_ENTERS_TARGET`。对单个解释性短语的影响判断应另列人工核查依据，不能凭字段名放行整个记录。
+
+均值顺序候选读取配置将 context 限定为研究时期及真正限定目标的背景，避免要求模型把业务故事再次写进数学字段。已有的 `unresolved` 备注仍按独立备注审核处理；目标、科学条件、信息范围和有限模型完整性不能变成备注豁免。维护模块为 `cfm_id/source_review_diagnostics.py`；不在评测代码中另造批准规则。
+
 ## 2026-10-31：材料交接与两种结果
 
 显式启用 `material_handoff="information-inventory-1"` 后，固定政策均值、两政策差值读取会接收 A0 已审核的 `sample_data_description`、`available_information` 原文位置清单。清单不复制 A0 的解释作为事实，不自动补回答、引用或科学许可；A0 的信息分类仍须对照原文复核。其他读取族尚未接此选项，显式使用会停止，不静默忽略。

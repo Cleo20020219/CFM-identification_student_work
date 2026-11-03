@@ -43,7 +43,7 @@ project / business_intake
 | `examples/network_mean_order_dispatch_reference.py` | 可运行的合成材料、人工构造读取和显式合成审核；不是 LLM 评测 |
 | `tests_gateway/test_network_mean_order_dispatch.py` | 接入正负例、假设阶梯、重读和证书防篡改 |
 
-推荐配置现为 `network-source-selections-mean-orders-1`：沿用原 alignment 读取组件，仅为两政策问题增加可选均值顺序字段。System Prompt 不改写。旧 profile 的请求、Schema、解析默认保持原状，旧记录仍按原配置重建。没有顺序字段的普通 POINT / mean-box 继续走原方法。
+本次能力接入时的配置为 `network-source-selections-mean-orders-1`，它沿用原 alignment 读取组件，为两政策问题增加可选均值顺序字段。2026-11-03 的推荐起点已更新为保留这项能力的 `network-shared-definitions-1`，见[推荐配置](BUSINESS_READING_CONFIG_ZH.md)。旧 profile 的请求、Schema、解析默认保持原状，旧记录仍按原配置重建。没有顺序字段的普通 POINT / mean-box 继续走原数学方法。
 
 ## 运行与预期
 

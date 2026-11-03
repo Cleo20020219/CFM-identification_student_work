@@ -22,7 +22,8 @@ def prepare(fixture):
 
 
 def method(view):
-    assert [r['method'] for r in view['methods']] == [r3.METHOD]
+    assert [r['method'] for r in view['methods']] == list(r3.METHODS)
+    assert view['methods'][1]['planning_state']=='NOT_PLANNED_FOR_CURRENT_INPUT'
     return view['methods'][0]
 
 
@@ -65,7 +66,7 @@ def test_readonly_entry_uses_existing_gates_without_reexecuting_or_granting_perm
     archived = diagnostic.describe(p,result=result,**reviews(a))
     assert method(archived)['certificate']['state'] == 'REPLAY_REPORTED'
     assert not dispatch.execute(s,'q1',**o,**dict(a,plan_review=archived))['backend_called']
-    assert [x['method'] for x in requirements.catalog(r3.FAMILY)] == [r3.METHOD]
+    assert [x['method'] for x in requirements.catalog(r3.FAMILY)] == list(r3.METHODS)
     assert len(requirements.catalog()) == 3
     assert pending['observational']['target_conditioning_review'] is None  # Legacy fixture remains supported.
 

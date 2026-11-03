@@ -127,33 +127,41 @@ def _base_parse(bundle, raw, *, binding, profile=None):
 
 @lru_cache(maxsize=None)
 def reading_model(profile=None):
-    from .network_mean_order_reading import NetworkMeanOrderModel, field, PROFILE
-    if profile != PROFILE:
+    from .network_mean_order_reading import NetworkMeanOrderModel, field, PROFILES
+    if profile not in PROFILES:
         return _base_reading_model(profile)
     return create_model('NetworkPolicyContrastWithOrders', __base__=_base_reading_model(profile),
                         mean_order_model=(NetworkMeanOrderModel | None, field()))
 
 
 def make_request(bundle, *, binding, assignment_semantics=None, profile=None):
-    from .network_mean_order_reading import extend_request, PROFILE
+    from .network_mean_order_reading import extend_request, PROFILES
     request = _base_make_request(bundle, binding=binding,
         assignment_semantics=assignment_semantics, profile=profile)
-    return extend_request(request) if profile == PROFILE else request
+    if profile not in PROFILES:return request
+    request = extend_request(request)
+    from . import shared_fact_definitions as shared
+    if profile == shared.PROFILE:return shared.apply(request)
+    from . import mean_order_ownership as ownership
+    return ownership.apply(request) if profile == ownership.PROFILE else request
 
 
 def field_constraints(paths, *, request, profile=None):
     rows = network_fact_protocol(profile).public_constraints(paths, request=request)
-    from .network_mean_order_reading import PROFILE
-    if profile == PROFILE:
+    from .network_mean_order_reading import PROFILES
+    if profile in PROFILES:
         from .mean_order_field_contract import field_constraints as order_constraints
         rows += order_constraints(paths, request=request)
+        from . import mean_order_ownership as ownership
+        if profile == ownership.PROFILE:
+            rows += ownership.field_constraints(paths, request=request)
     return rows
 
 
 def parse(bundle, raw, *, binding, profile=None):
-    from .network_mean_order_reading import NetworkMeanOrderModel, PROFILE
+    from .network_mean_order_reading import NetworkMeanOrderModel, PROFILES
     candidate = deepcopy(raw)
-    orders = candidate.pop('mean_order_model', None) if profile == PROFILE else None
+    orders = candidate.pop('mean_order_model', None) if profile in PROFILES else None
     result = _base_parse(bundle, candidate, binding=binding, profile=profile)
     if orders is not None:
         value = NetworkMeanOrderModel.model_validate(orders)

@@ -11,6 +11,7 @@ from .source_reference_wire import catalog, expand
 from .information_field_rules import require as require_information_rule
 
 VERSION = 'network-policy-reading-1'
+COUNT_RULE = 'BINARY为0/1结果；COUNT为非负整数次数；CONTINUOUS为连续数值结果。计数均值不是整数，COUNT不要求Poisson、不授予有限矩、上界、暴露充分性或PARTIAL。OTHER包括无明确数值含义的类别，UNKNOWN表示未知。'
 
 
 class Record(BaseModel):
@@ -38,7 +39,7 @@ class Study(Cited):
     edge_list_complete: StrictBool | None
     treatment: str | None
     outcome: str | None
-    outcome_kind: Literal['BINARY', 'CONTINUOUS', 'OTHER', 'UNKNOWN']
+    outcome_kind: Literal['BINARY', 'COUNT', 'CONTINUOUS', 'OTHER', 'UNKNOWN'] = Field(description=COUNT_RULE)
     context: str | None
 
 

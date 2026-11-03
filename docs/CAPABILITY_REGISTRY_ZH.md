@@ -1,6 +1,6 @@
 # 已有能力登记与实际入口
 
-2026-10-30 本轮：新增 `NETWORK_OBSERVATIONAL_POLICY_FACTS`，绑定已有 `R3_FULL_ASSIGNMENT`。相同的固定政策目标按已审核的 `assignment_family=OBSERVATIONAL` 选择观察性事实合同；不是新目标类别，也不自动批准交换性。详见 [R3 合同与边界](R3_POLICY_ENTRY_CONTRACT_ZH.md)。
+`NETWORK_OBSERVATIONAL_POLICY_FACTS` 绑定已有 `R3_FULL_ASSIGNMENT` 和 `R3_MEAN_SIGNATURE`。后者使用显式签名读取配置及单独的充分性审核；默认旧读取合同保持不变。相同固定政策目标按已审核的 `assignment_family=OBSERVATIONAL` 选择观察性事实家族，不是新目标类别，也不自动批准交换性。详见 [R3 合同与边界](R3_POLICY_ENTRY_CONTRACT_ZH.md)。
 
 此前：`NETWORK_POLICY_CONTRAST_FACTS` 新增 `R2_ENDPOINT_DIFFERENCE` 方法绑定，仍使用原比较事实合同及两端原生 R2 证书。数学能力没有新增一种 R；该方法只是已有能力的业务组合。详情见 [接入验收](R2_CONTRAST_INTEGRATION_ZH.md)。数学材料索引在 `literature_support`，只作导航，不能成为第二个运行能力表。
 
@@ -25,14 +25,14 @@ R1a/R1b/R2/R3 是识别机制，D1–D6 是分配设计，E1–E5 是暴露定�
 | 已审核的目标 | 事实读取协议类别 | 可以提出的方法计划 | 仍需满足的范围 |
 |---|---|---|---|
 | 单个固定政策的均值 | `NETWORK_FIXED_POLICY_FACTS` | R1b 完整安排、R2 均值签名、有限 D2/E1 政策均值 | 完整政策、明确评价总体及等权均值；各自 A4、A5、支持条件须继续审核／计算 |
-| 观察性固定 W 下单个完整政策的均值 | `NETWORK_OBSERVATIONAL_POLICY_FACTS` | R3_FULL_ASSIGNMENT | 完整观测总体律、逐对象条件均值覆盖、独立完整向量交换性；最多12节点，仅固定 W，正支持由原生后端检查 |
+| 观察性固定 W 下单个完整政策的均值 | `NETWORK_OBSERVATIONAL_POLICY_FACTS` | R3_FULL_ASSIGNMENT / R3_MEAN_SIGNATURE | 完整观测总体律、逐对象条件均值覆盖、独立完整向量交换性；最多12节点，仅固定W；签名另有全安排条件均值充分性及范围审核，支持由原生后端检查 |
 | 第一政策均值减第二政策均值 | `NETWORK_POLICY_CONTRAST_FACTS` | 两个同方法 R1b／R2 端点的有符号组合、联合有限 D2/E1 差值及均值顺序模型 | 两个完整政策、共同评价总体／结果／情境及明确差值方向；不是所有 `TOTAL_EFFECT` 都已接通 |
 | 原设计条件平均下的直接／同伴效应 | `NETWORK_RANDOMIZED_EFFECT_FACTS` | 既有 R1a 局部均值的组合 | 已连接 D1–D6/E1–E5、固定评价名单及等权平均；明确局部状态、方向与其余安排规则；逐项审核和正支持仍必需 |
 | DAG 干预分布 | `VARIABLE_DAG_FACTS` | 经典后门、调整、单变量经典前门 | 各自有限变量 DAG 合同；不自动组合对象网络与变量 DAG |
 
 有限 PARTIAL 仍限于当前完整声明的 D2/E1 模型，需要精确总体均值、界限和信息／约束完整性声明；sharp 相对于审核后的模型。仅因一个 POINT 方法失败，不会自动改成 PARTIAL。方法计划可以包含多个尚未检验支持条件的方法，登记或进入计划均不等于识别成功。
 
-R1a 的 D1–D6/E1–E5 直接与同伴效应组合已接入，详见[局部效应入口](NETWORK_EFFECT_DISPATCH_ZH.md)与[设计/暴露验收](NETWORK_DESIGN_EXPOSURE_ENTRY_ZH.md)。直接效应支持两个比较方向：正向沿用原生具名效应合同，反向实际调用既有线性目标生产与重放函数。独立单个局部均值、有限政策混合及 R3 的签名／标准化／暴露调整等仍未完整连接本共同入口。R3-Full 只连接上述固定 W 完整政策子域，零支持不自动转签名或 PARTIAL。D2/E1均值顺序两政策差值已接本共同入口，并保留原专门入口；[接入范围与验收](NETWORK_MEAN_ORDER_ENTRY_ZH.md)。库外候选研究仍保留专门入口。
+R1a 的 D1–D6/E1–E5 直接与同伴效应组合已接入，详见[局部效应入口](NETWORK_EFFECT_DISPATCH_ZH.md)与[设计/暴露验收](NETWORK_DESIGN_EXPOSURE_ENTRY_ZH.md)。直接效应支持两个比较方向：正向沿用原生具名效应合同，反向实际调用既有线性目标生产与重放函数。独立单个局部均值、有限政策混合及 R3 的标准化效应／暴露调整等仍未完整连接本共同入口。R3固定W政策均值已连接Full及显式签名配置；Full零支持不自动授予签名充分性，也不自动转PARTIAL。D2/E1均值顺序两政策差值已接本共同入口，并保留原专门入口；[接入范围与验收](NETWORK_MEAN_ORDER_ENTRY_ZH.md)。库外候选研究仍保留专门入口。
 
 登记描述协议现为 `identification-capability-registry-2`，将单值 `target_kind` 改为 `target_kinds` 列表，避免为共用事实协议复制两套直接／同伴效应登记。内部九个会话 ID、原生研究目录和数学证书协议保持不变。
 

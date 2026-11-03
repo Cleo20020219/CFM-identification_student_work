@@ -7,10 +7,12 @@
 | 固定政策均值 | `network_fact_protocols` 拥有既有配置表；单个完整政策、评价范围与信息角色 | `network_policy_dispatch` / 有限有界适配 |
 | 两政策差值 | `network_contrast_reading` 复用政策组件；保留差值专属方向、共同评价范围、联合模型检查 | `network_contrast_dispatch` / `network_mean_order_dispatch`；推荐 profile 增加可选、带来源的均值顺序字段，旧 profile 保持兼容 |
 | 随机化局部效应 | `readers/local_effect_lifecycle` 配对 legacy / role / owned / scoped 既有实现；解析须消费已审核局部请求 | `network_effect_dispatch` |
-| R3 观察性政策 | `network_observational_policy_reading`；固定背景须跨阶段独立交接 | `network_observational_policy_dispatch` |
+| R3 观察性政策 | `network_observational_policy_reading`及显式`network_observational_signature_reading`配置；复用构造/解析，固定背景须跨阶段独立交接，均值充分性单独审核 | `network_observational_policy_dispatch` |
 | 变量 DAG | `dag_query_reading`；保留干预值、查询范围及原生投影 | `dag_method_dispatch` |
 
 这是读取合同的分类，不是业务用户必须选择的五种数学方法。数学覆盖仍只有 `cfm_id.capability_registry` 一处运行登记；一份读取合同可能交给多个已有数学方法检查。
+
+两政策读取登记现复用 `TargetContextHandoff` 交接明确固定背景：首次请求不增加字段或提示，重读定位复用 `/study/context`；业务适配器独立要求目标匹配和条件模型审核，见[合同](FIXED_BACKGROUND_CONTRAST_ZH.md)。这不增加一个新定理或业务路由。
 
 ## 一份登记贯穿哪些环节
 
@@ -37,6 +39,10 @@
 配置模块仍拥有各自的协议表：政策归 `network_fact_protocols`，局部效应配对归 `readers/local_effect_lifecycle`。公共登记消费它们，不复制第二份版本表。局部 A0 说明归 `compact_response_contract.LOCAL_PROFILE_MODULES`；增加协议必须连同 Schema、审核、诊断、重读一起验收。
 
 ## 兼容与数学边界
+
+R3观察性固定政策在同一家族内提供 `observational_fact_profile="mean-signature"`，增加暴露定义和同一固定W下的条件均值充分性。它有独立Schema/引用上下文，复用旧请求构造、解析与System Prompt；默认与历史记录不变。登记同时拥有新字段的公开诊断及重读说明。配置不是R3科学批准，完整政策有支持时仍可用原Full路线。详见[R3入口合同](R3_POLICY_ENTRY_CONTRACT_ZH.md)。
+
+同一家族的 `mean-signature-definitions` 增加逐表定义依赖，复用公共 `source_reference_wire.definition_evidence` 解析与来源审核。登记的 `model` 是带定义引用的传输模型，`facts_model` 是投影后的原签名事实模型；只有确有传输／语义差异时才需后者。数学编译仍使用原事实，不将定义回执当成A4或A5许可；新协议与旧协议各自绑定，禁止自动转换旧审核。
 
 - 旧 hash 来源 DAG 接口继续走明确的兼容分支；不伪装成 short_refs 登记。旧显式数学/研究接口保留。
 - 原生编译、求解、科学审核和独立验证函数未改变。局部目标、DAG 限制也没有因为统一登记而被抹平。

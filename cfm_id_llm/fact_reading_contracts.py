@@ -49,6 +49,7 @@ class FactReadingContract:
     contextual_parse: Callable | None = None
     contextual_constraints: Callable | None = None
     uses_network_profile: bool = False
+    facts_model: type[BaseModel] | None = None
 
     def __post_init__(self):
         if (not all(type(x) is str and x.strip() for x in
@@ -68,6 +69,8 @@ class FactReadingContract:
             raise ReadingContractError('INVALID_FACT_READING_SELECTOR')
         if any(f is not None and not callable(f) for f in (self.contextual_parse,self.contextual_constraints)):
             raise ReadingContractError('INVALID_FACT_READING_CONTEXT_HANDLER')
+        if self.facts_model is not None and (not isinstance(self.facts_model,type) or not issubclass(self.facts_model,BaseModel)):
+            raise ReadingContractError('INVALID_PROJECTED_FACTS_MODEL')
         version = self.model.model_fields.get('version')
         if version is None or get_args(version.annotation) != (self.wire_version,):
             raise ReadingContractError('INCOMPLETE_FACT_READING_CONTRACT')
@@ -114,10 +117,16 @@ class FactReadingContract:
     def public_constraints(self, entry, paths):
         self.check_entry(entry)
         if self.contextual_constraints is not None:
-            return self.contextual_constraints(entry, paths)
-        rows = self.field_constraints(paths, request=entry['request']) if self.field_constraints else []
+            rows = self.contextual_constraints(entry, paths)
+            if entry.get('reviewed_intent') is None:
+                return rows  # Preserve the historical contextual receipt.
+        else:
+            rows = self.field_constraints(paths, request=entry['request']) if self.field_constraints else []
         if self.target_context is not None and entry.get('reviewed_target_context'):
             rows += self.target_context.field_constraints(paths)
+        if entry.get('reviewed_intent') is not None:
+            from .reviewed_intent_handoff import field_constraints
+            rows += field_constraints(paths)
         return rows
 
 
@@ -125,6 +134,8 @@ def registrations():
     # Static source-owned pairing; no user data controls imports. Construct on
     # access so request factories and type diagnostics consume the same owner.
     from . import network_observational_policy_reading as reading
+    from . import network_observational_signature_reading as signature
+    from . import network_observational_definitions as definitions
     from . import query_conditioning_contract as conditioning
     from . import network_policy_reading as policy
     from . import network_contrast_reading as contrast
@@ -133,11 +144,29 @@ def registrations():
     r3 = FactReadingContract(
         reader_id='NETWORK_OBSERVATIONAL_POLICY_FACTS', reference_format='short_refs',
         version_field='observational_fact_contract', wire_version=reading.VERSION,
+        profile_field='observational_fact_profile',
         make_request=reading.make_request, parse=reading.parse,
         reference_catalog=reading.reference_catalog, model=reading.ObservationalPolicyReading,
         documents=reading.documents,
         target_context=TargetContextHandoff(conditioning.clarify_conditioning_request,
             conditioning.conditioning_constraints, conditioning.MATCH_DECISION, conditioning.DESCRIPTION))
+    r3_signature = FactReadingContract(
+        reader_id=r3.reader_id, reference_format=r3.reference_format,
+        version_field=r3.version_field, wire_version=signature.VERSION,
+        profile_field=r3.profile_field, profile=signature.PROFILE,
+        make_request=signature.make_request, parse=signature.parse,
+        reference_catalog=signature.reference_catalog, model=signature.ObservationalSignatureReading,
+        documents=reading.documents, target_context=r3.target_context,
+        field_constraints=signature.field_constraints)
+    r3_definitions = FactReadingContract(
+        reader_id=r3.reader_id, reference_format=r3.reference_format,
+        version_field=r3.version_field, wire_version=definitions.VERSION,
+        profile_field=r3.profile_field, profile=definitions.PROFILE,
+        make_request=definitions.make_request, parse=definitions.parse,
+        reference_catalog=definitions.reference_catalog, model=definitions.Reading,
+        facts_model=signature.ObservationalSignatureReading,
+        documents=reading.documents, target_context=r3.target_context,
+        field_constraints=definitions.field_constraints)
     # Keep configuration -> request/parser/model ownership in the existing table.
     # Several request profiles share a wire version; these are distinct selectors.
     policies, contrasts = [], []
@@ -157,7 +186,9 @@ def registrations():
             make_request=partial(contrast.make_request, profile=profile),
             parse=partial(contrast.parse, profile=profile),
             reference_catalog=contrast.reference_catalog, model=contrast.reading_model(profile),
-            documents=policy.documents, target_context=None,
+            documents=policy.documents, target_context=TargetContextHandoff(
+                conditioning.preserve_contrast_request, conditioning.contrast_conditioning_constraints,
+                conditioning.MATCH_DECISION, conditioning.CONTRAST_DESCRIPTION),
             profile_field='network_fact_contract', profile=profile,
             uses_assignment_semantics=True, field_constraints=partial(contrast.field_constraints, profile=profile),
             clarify_comparison=clarify_fact_order))
@@ -177,7 +208,7 @@ def registrations():
         target_context=None, uses_assignment_semantics=True, uses_network_profile=True,
         contextual_parse=effects.parse, contextual_constraints=effects.field_constraints)
         for profile,module,model in effects.variants())
-    return (r3, *policies, *contrasts, dag_contract, *local)
+    return (r3, r3_signature, r3_definitions, *policies, *contrasts, dag_contract, *local)
 
 
 def _family(reader_id):

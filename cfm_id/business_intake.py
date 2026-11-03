@@ -27,7 +27,7 @@ from cfm_id_llm.target_summary_contract import Profile as TargetSummaryProfile
 from cfm_id_llm.compact_reference_contract import Profile as A0ReferenceProfile
 from cfm_id_llm.compact_response_contract import Profile as A0ResponseProfile
 from cfm_id_llm.quality_formulator import A0QualityValidationError
-from .business_reading_config import ReadingConfig, ReadingFormat, FactFormat
+from .business_reading_config import ReadingConfig, ReadingFormat, FactFormat, ObservationalProfile
 from cfm_id_llm.network_fact_protocols import NetworkFactProfile
 
 
@@ -71,13 +71,14 @@ class BusinessIntake(BaseModel):
     a0_reference_contract: A0ReferenceProfile = None
     a0_response_contract: A0ResponseProfile = None
     network_fact_contract: NetworkFactProfile = None
+    observational_fact_profile: ObservationalProfile = None
     material_handoff: Literal['information-inventory-1'] | None = None
 
     @model_serializer(mode='wrap')
     def omit_absent_review_extensions(self,handler):
         # Preserve historical checkpoint and review hashes for ordinary reads.
         value=handler(self)
-        for key in ('reading_revision','reading_change_review','reading_stop_review','assignment_semantics','network_fact_contract','target_summary_contract','a0_reference_contract','a0_response_contract','material_handoff'):
+        for key in ('reading_revision','reading_change_review','reading_stop_review','assignment_semantics','network_fact_contract','target_summary_contract','a0_reference_contract','a0_response_contract','material_handoff','observational_fact_profile'):
             if value.get(key) is None:value.pop(key,None)
         return value
 
@@ -122,6 +123,8 @@ def _request_sha(s):
 def _checked(value):
     raw = value.model_dump(mode='json') if isinstance(value, BusinessIntake) else value
     s = BusinessIntake.model_validate(raw)
+    if s.observational_fact_profile is not None and s.fact_format != 'short_refs':
+        raise IntakeError('OBSERVATIONAL_PROFILE_REQUIRES_SHORT_REFS')
     if s.material_handoff and (s.reading_format!='compact' or s.fact_format!='short_refs'):
         raise IntakeError('MATERIAL_HANDOFF_REQUIRES_COMPACT_AND_SHORT_REFS')
     if s.a0_reference_contract is not None and s.reading_format != 'compact':
@@ -139,7 +142,7 @@ def _checked(value):
 
 def start(case: BusinessCase | dict, *, reading_format='compact', fact_format='short_refs',
           assignment_semantics=None, network_fact_contract=None, target_summary_contract=None,
-          a0_reference_contract=None, a0_response_contract=None, material_handoff=None) -> BusinessIntake:
+          a0_reference_contract=None, a0_response_contract=None, material_handoff=None, observational_fact_profile=None) -> BusinessIntake:
     """Accept question and sources without asking the user to choose a method."""
     if isinstance(case, BusinessCase):
         case = case.model_dump(mode='json')
@@ -149,7 +152,8 @@ def start(case: BusinessCase | dict, *, reading_format='compact', fact_format='s
                        target_summary_contract=target_summary_contract if reading_format == 'compact' else None,
                        a0_reference_contract=a0_reference_contract,
                        a0_response_contract=a0_response_contract,
-                       network_fact_contract=network_fact_contract, material_handoff=material_handoff)
+                       network_fact_contract=network_fact_contract, material_handoff=material_handoff,
+                       observational_fact_profile=observational_fact_profile)
     return _checked(s.model_copy(update={'request_sha256': _request_sha(s)}))
 
 
