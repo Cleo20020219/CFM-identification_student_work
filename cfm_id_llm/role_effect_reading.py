@@ -19,7 +19,7 @@ ROLE_RULE = ('target.reference记录已审参照状态的own和exposure；target
 
 
 class RoleTarget(legacy.Cited):
-    kind: Literal['DIRECT_EFFECT', 'SPILLOVER_EFFECT', 'OTHER', 'UNKNOWN']
+    kind: Literal['DIRECT_EFFECT', 'SPILLOVER_EFFECT', 'LOCAL_TOTAL_EFFECT', 'OTHER', 'UNKNOWN']
     reference: legacy.LocalArm
     evaluated: legacy.LocalArm
     population: list[str] | None

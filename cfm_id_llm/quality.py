@@ -281,7 +281,7 @@ def _semantic_actions(case: BusinessCase, q: BusinessInquiryV010) -> list[Review
                 detail=("材料中已有推广范围提示，应先重新提取，不要询问业务人员重复描述。"
                         if mentioned else "政策具体分配、权重或范围尚不明确；不能转换成正式政策向量。")))
     if q.target.kind in (TargetKind.DIRECT_EFFECT, TargetKind.SPILLOVER_EFFECT,
-                         TargetKind.TOTAL_EFFECT, TargetKind.ATE, TargetKind.CATE):
+                         TargetKind.LOCAL_TOTAL_EFFECT, TargetKind.TOTAL_EFFECT, TargetKind.ATE, TargetKind.CATE):
         if q.semantics.comparator.basis == "UNRESOLVED":
             result.append(ReviewActionV010(
                 owner="SCIENTIFIC_REVIEWER", code="EFFECT_COMPARATOR_OPEN",

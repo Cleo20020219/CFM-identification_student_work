@@ -64,7 +64,8 @@ def test_configured_registry_preserves_single_protocol_owner(profile,default_pol
     s,e,o=setup(profile=profile);c=registry.contract_for_entry(e);p=network_fact_protocol(profile)
     assert c.make_request is p.make_request and c.parse is p.parse and c.model is p.model
     assert c.profile==profile and c.profile_field=='network_fact_contract' and c.version_field is None
-    assert c.wire_version==p.wire_version and c.target_context is None
+    assert c.wire_version==p.wire_version and c.target_context is not None
+    assert c.target_context.clarify_request.__name__=='preserve_contrast_request'
     assert c.documents is reading.documents and c.reference_catalog is reading.reference_catalog
     assert c.model is model_for(e)
     assert c.entry_metadata()==({'network_fact_contract':profile} if profile else {})

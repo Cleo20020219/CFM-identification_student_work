@@ -10,8 +10,8 @@ FACT_VERSION=facts.VERSION
 apply_gate=previous.apply_gate
 EXTRA_STATE_RULES=previous.EXTRA_STATE_RULES
 SHARED=Field('shared_condition','两端共同保持的局部条件。',
- 'DIRECT_EFFECT只写共同同伴状态；SPILLOVER_EFFECT只写共同本人状态。明确未定保留MISSING及原因和原文，未提为UNKNOWN，不猜0/1。',section='comparison_request')
-GUIDANCE='''局部比较每项信息只填写一次。comparison_request.reference/evaluated只写两端发生变化的状态：DIRECT_EFFECT写本人是否使用；SPILLOVER_EFFECT写合作对象使用条件。shared_condition只写两端共同条件：直接效应为同伴条件，同伴效应为本人状态。未知或未定的共同条件保留UNKNOWN/MISSING，不能因为两端变化明确而补齐。不要在semantics再输出neighbor_exposure。
+ 'DIRECT_EFFECT只写共同同伴状态；SPILLOVER_EFFECT只写共同本人状态。LOCAL_TOTAL_EFFECT两坐标均改变，没有共同局部处理状态时写UNKNOWN，端点仍完整给出。明确未定保留MISSING及原因和原文，未提为UNKNOWN，不猜0/1。',section='comparison_request')
+GUIDANCE='''局部比较每项信息只填写一次。comparison_request.reference/evaluated只写两端发生变化的状态：DIRECT_EFFECT写本人是否使用；SPILLOVER_EFFECT写合作对象使用条件；LOCAL_TOTAL_EFFECT同时写本人及合作对象状态。shared_condition只写两端共同局部处理条件：直接效应为同伴条件，同伴效应为本人状态；LOCAL_TOTAL_EFFECT没有共同局部处理状态时用UNKNOWN，不补一个固定状态。未知或未定的共同条件保留UNKNOWN/MISSING，不能因为两端变化明确而补齐。不要在semantics再输出neighbor_exposure。
 各角色用业务原文表达，不需要把启用、不启用或过半重复写成数值代码；编码定义在common的相应字段保留。角色引用选择该状态的目标原文；若自行写出编码，仍需引用编码定义。quantity的枚举、方向与独立引用规则不变。
 aggregation只写如何汇总和权重，不重复common.outcome中的结果名称、单位或semantics.time_horizon中的期间；target_population记录评价谁，standardization_distribution记录其余安排按何规则平均。goal保留本问，不扩写资料定义。所有原文明确的信息必须有其所属字段，减少重复不允许删除真实条件。'''
 

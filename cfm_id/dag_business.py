@@ -113,6 +113,13 @@ def inspect_candidate(bundle,wire,*,route_id=CLASSICAL_ROUTE):
             if value is None or (value is False and name in ('graph_complete','latent_causes_accounted')):
                 missing.append(SCOPE_QUESTIONS[name])
             elif value is False:unsupported.append('MODEL_SCOPE_REJECTED:'+name)
+        # Preserve an explicitly discussed unit-model boundary. The optional
+        # extension does not alter old candidate hashes or the native SCM.
+        interference=c.scope.no_between_unit_interference
+        if interference is not None:
+            if interference.value is False:unsupported.append('BETWEEN_UNIT_INTERFERENCE_NOT_ADAPTED')
+            elif interference.value is None:
+                missing.append('本次是否采用对象之间无干扰的模型？材料中对此尚未决定，不能自动按无干扰处理。')
         if any(e.kind!='DIRECT_CAUSE' for e in c.relations):missing.append('材料中的相关关系或不确定方向不能直接成为因果边，请确认这些关系。')
         if c.information.kind!='FULL_JOINT_POPULATION_LAW':missing.append('请明确可用的完整观测联合总体分布；样本表或边际统计不能替代。')
         if set(c.information.variables)!={v.name for v in c.variables if v.observation=='OBSERVED'}:

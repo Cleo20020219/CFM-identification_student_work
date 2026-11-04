@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_validator, field_validator
 from .source_reference_wire import catalog, expand
 from .information_field_rules import require as require_information_rule
+from .network_design_reading import assignment_schema, validate_assignment_ownership
 
 VERSION = 'network-policy-reading-1'
 COUNT_RULE = 'BINARY为0/1结果；COUNT为非负整数次数；CONTINUOUS为连续数值结果。计数均值不是整数，COUNT不要求Poisson、不授予有限矩、上界、暴露充分性或PARTIAL。OTHER包括无明确数值含义的类别，UNKNOWN表示未知。'
@@ -44,6 +45,7 @@ class Study(Cited):
 
 
 class Assignment(Cited):
+    model_config = ConfigDict(json_schema_extra=assignment_schema)
     kind: Literal['INDEPENDENT_BERNOULLI', 'UNIFORM_FIXED_QUOTA', 'TWO_GROUP_FIXED_QUOTA', 'CLUSTER_BERNOULLI', 'MULTI_GROUP_FIXED_QUOTA', 'TWO_STAGE_QUOTA_MIXTURE', 'OTHER', 'UNKNOWN']
     probabilities: dict[str,str] | None
     fixed_count: StrictInt | None
@@ -53,6 +55,11 @@ class Assignment(Cited):
     cluster_probabilities: list[str] | None = None
     quota_profiles: list[list[StrictInt]] | None = None
     profile_probabilities: list[str] | None = None
+
+    @model_validator(mode='after')
+    def field_ownership(self):
+        validate_assignment_ownership(self)
+        return self
 
 
 class Target(Cited):
@@ -130,12 +137,19 @@ class BoundedModel(Cited):
     outcome_unit: str | None
     outcome_period: str | None
     listed_means_are_complete_information: Declaration
-    no_additional_coupling_constraints: Declaration
+    no_additional_coupling_constraints: Declaration = Field(description=(
+        'Whether there are no coupling restrictions beyond the base box model. '
+        'Declared mean-order restrictions are coupling restrictions, so this is false when they are adopted. '
+        'For a complete model that includes mean orders, the separate '
+        'mean_order_model.no_additional_constraints_beyond_declared_orders records absence of further restrictions.'))
 
 
 class Information(Cited):
     operator: Literal['NODE_FULL_LAW', 'FULL_JOINT_LAW', 'ASSIGNMENT_NODE_MEANS',
-                      'NODE_SIGNATURE_MEANS', 'FINITE_SAMPLE', 'OTHER', 'UNKNOWN']
+                      'NODE_SIGNATURE_MEANS', 'FINITE_SAMPLE', 'OTHER', 'UNKNOWN'] = Field(description=(
+        '信息按什么坐标给出，不是信息齐全或可识别的结论。NODE_SIGNATURE_MEANS按对象、本人处理、同伴暴露给均值；'
+        '允许只提供部分格子，不要求每个对象四格齐全，不把缺格改成另一种operator。'
+        'ASSIGNMENT_NODE_MEANS按完整处理向量给均值。覆盖范围仅由实际列明格子表达；均值充分性和信息完整性另行审核。'))
     availability: Literal['SYMBOLIC_POPULATION_OPERATOR', 'EXACT_POPULATION_VALUE', 'FINITE_SAMPLE', 'UNKNOWN']
     outcome_nodes: list[str]
     assignment_cells: list[list[StrictInt]]

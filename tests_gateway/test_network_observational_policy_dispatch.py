@@ -46,8 +46,10 @@ def test_registered_scope_and_scientific_conditions_match_native_contract():
     b=registry.reader_for('UNIT_NETWORK','FIXED_POLICY_VALUE',assignment_family='OBSERVATIONAL')
     assert b.reader_id==bridge.FAMILY and b.assignment_family=='OBSERVATIONAL'
     assert registry.reader_for('UNIT_NETWORK','FIXED_POLICY_VALUE').reader_id=='NETWORK_FIXED_POLICY_FACTS'
-    for kind in ('DIRECT_EFFECT','SPILLOVER_EFFECT','TOTAL_EFFECT'):
-        assert registry.reader_for('UNIT_NETWORK',kind,assignment_family='OBSERVATIONAL') is None
+    for kind in ('DIRECT_EFFECT','SPILLOVER_EFFECT','LOCAL_TOTAL_EFFECT'):
+        assert registry.reader_for('UNIT_NETWORK',kind,assignment_family='OBSERVATIONAL').reader_id=='NETWORK_OBSERVATIONAL_EFFECT_FACTS'
+    # A local contrast is not an observational comparison of complete policies.
+    assert registry.reader_for('UNIT_NETWORK','TOTAL_EFFECT',assignment_family='OBSERVATIONAL') is None
     assert registry.reader_for('VARIABLE_DAG','INTERVENTIONAL_DISTRIBUTION',assignment_family='OBSERVATIONAL').reader_id=='VARIABLE_DAG_FACTS'
     data=registry.inventory()['separate_native_entries'][0]
     assert {bridge.METHOD,bridge.SIGNATURE_METHOD} <= set(data['common_business_routes'])

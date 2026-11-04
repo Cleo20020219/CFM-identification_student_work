@@ -110,6 +110,14 @@ def test_unknown_reader_or_format_never_falls_back_to_dag(reader, fmt, reason):
         dispatch._fact_request({}, 'binding', reader, fmt, {}, [])
 
 
+def test_broken_registration_is_not_disguised_as_unknown_reader(monkeypatch):
+    def broken(*args):
+        raise dispatch.capabilities.RegistryError('MISSING_BUSINESS_HANDLER')
+    monkeypatch.setattr(dispatch.capabilities,'business_binding',broken)
+    with pytest.raises(dispatch.capabilities.RegistryError,match='MISSING_BUSINESS_HANDLER'):
+        dispatch._fact_request({},'binding','NETWORK_FIXED_POLICY_FACTS','short_refs',{},[])
+
+
 def network_setup(profile, **kwargs):
     old, _, _, _ = old_setup(**kwargs)
     s = intake.start_configured(old.case, ReadingConfig(reading_format='canonical',

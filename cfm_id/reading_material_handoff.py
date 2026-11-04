@@ -9,7 +9,8 @@ from .business_intake import _sha
 
 VERSION='information-inventory-1'
 FIELDS=('sample_data_description','available_information')
-FAMILIES=('NETWORK_FIXED_POLICY_FACTS','NETWORK_POLICY_CONTRAST_FACTS')
+FAMILIES=('NETWORK_FIXED_POLICY_FACTS','NETWORK_POLICY_CONTRAST_FACTS',
+          'NETWORK_RANDOMIZED_ARM_FACTS','NETWORK_FINITE_POLICY_FACTS','NETWORK_OBSERVATIONAL_EFFECT_FACTS')
 
 
 def build(session,query_id,query_review):

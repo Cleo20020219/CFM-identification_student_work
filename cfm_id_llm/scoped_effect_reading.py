@@ -93,7 +93,7 @@ def transform_request(request):
 def parse(bundle, raw, *, binding, reviewed_query):
     wire = Reading.model_validate(deepcopy(raw)); projected = wire.model_dump(mode='json')
     kind = reviewed_query['kind']
-    if kind not in ('DIRECT_EFFECT', 'SPILLOVER_EFFECT'):
+    if kind not in ('DIRECT_EFFECT', 'SPILLOVER_EFFECT', 'LOCAL_TOTAL_EFFECT'):
         raise ValueError('REVIEWED_LOCAL_KIND_REQUIRED')
     refs = previous.legacy.reference_catalog(bundle, binding=binding)
     previous.expand(deepcopy(projected), refs)

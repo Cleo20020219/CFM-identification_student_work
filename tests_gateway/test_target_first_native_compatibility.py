@@ -37,6 +37,11 @@ def setup_target_first(kind, profile=CONTRACT):
     if profile=='target-first-skill-1':
         for q in raw['queries']:
             sem=q['semantics']
+            # Older complete-policy fixtures omitted optional slots. The
+            # current Skill wire requires them explicitly, without deriving
+            # peer states or a background distribution from a complete policy.
+            sem.setdefault('neighbor_exposure','UNKNOWN')
+            sem.setdefault('standardization_distribution','UNKNOWN')
             sem['first_arrangement']=sem.pop('intervention')
             sem['second_arrangement']=sem.pop('comparator','NOT_APPLICABLE')
             if q['comparison_order']['operation']=='INTERVENTION_MINUS_COMPARATOR':

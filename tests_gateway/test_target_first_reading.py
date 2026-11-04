@@ -17,6 +17,11 @@ def fixture(family='contrast'):
         q['semantics'].pop('policy_assignment',None)
         q['semantics']['outcome']=deepcopy(raw['common']['outcome'])
         q['semantics']['decision_constraints']='UNKNOWN'
+        # A complete-policy question does not separately specify a peer state
+        # or a distribution over backgrounds. Current wire contracts require
+        # explicit unknown slots; these are test inputs, not answer repair.
+        q['semantics']['neighbor_exposure']='UNKNOWN'
+        q['semantics']['standardization_distribution']='UNKNOWN'
     return case,raw
 
 def test_new_schema_and_multi_query_do_not_lose_old_vocabulary():
@@ -89,3 +94,15 @@ def test_outcome_review_remains_required(decision):
     submitted=submit(s,r)
     e=dispatch.prepare_reader(s,'q1',query_review=submitted['query_review'])
     assert e['state']!='READY_TO_READ' and not e['backend_called']
+
+
+@pytest.mark.parametrize('field',['conditioning_context','outcome','decision_constraints'])
+def test_plain_text_claim_reports_field_without_repair_or_core(field):
+    case,raw=fixture();raw['queries'][0]['semantics'][field]='原文中的普通字符串，未提供字段状态或引用'
+    s=receive(case,raw,profile=new.CONTRACT);before=deepcopy(s.candidate)
+    inspected=intake.inspect(s)
+    assert inspected['reason_code']=='TARGET_FIRST_CONTRACT_REJECTED'
+    assert inspected['diagnostics']['reason']=='TARGET_FIRST_FIELD_TYPE'
+    assert inspected['diagnostics']['field']==f'queries.q1.semantics.{field}'
+    assert inspected['diagnostics']['received_type']=='str'
+    assert inspected['core_called'] is False and s.candidate==before

@@ -10,6 +10,17 @@
 
 读错后显式复查；缺条件时追问；方法未覆盖时报告覆盖缺口。未验证的 LLM 候选不能替代正式结论。当前是**需要审核的研究框架**，业务首读准确率仍有不足。
 
+## 直接体验网页
+
+下载完整仓库，在根目录执行：
+
+```powershell
+python -m pip install -e ".[documents]"
+python demo/serve.py
+```
+
+浏览器打开 `http://127.0.0.1:8772/`。可输入业务、上传资料、导入自己的模型 Key，或选择九个示例。后台完成读取和复核，保留必要追问，结果展示公式、采用条件与独立证书重放。**本仓库网页只做 Identification，不包含估计和策略模块。** 详细安装、启动和隐私说明见 [demo/README.md](demo/README.md)。
+
 ## 唯一源码与起点
 
 此独立仓库从根目录安装和运行。维护与发布副本的同步约定见[仓库布局](docs/REPOSITORY_LAYOUT_ZH.md)。证书内部摘要用于防止材料或审核被替换。
@@ -59,7 +70,7 @@ request = prepare_request(session)  # 只准备请求；不调用模型、不自
 4. [当前范围](docs/CURRENT_SCOPE_ZH.md)、[数学与文献导航](docs/MATH_AND_EVIDENCE_ZH.md)：原生能力与自然语言接入并非同一范围。
 5. [本次交接验收](docs/DELIVERY_READINESS_ZH.md)、[未解决项](docs/KNOWN_LIMITATIONS_ZH.md)。
 
-五类当前短引用读取家族已共用[读取组件登记](docs/FACT_READING_REGISTRY_ZH.md)：固定政策均值、两政策差值、局部效应、R3 观察性政策、变量 DAG。它们仍各自保持目标与科学审核，登记不是数学求解器，也不会自动批准条件。
+当前八类读取家族已接入共同业务能力登记：固定政策均值、两政策差值、局部效应、R3 观察性政策、变量 DAG、单个设计平均状态均值、有限混合政策均值、观察性网络效应。各家族保持各自的目标与科学审核；登记不是数学求解器，也不会自动批准条件。职责与适用范围见[能力登记](docs/CAPABILITY_REGISTRY_ZH.md)及[读取组件登记](docs/FACT_READING_REGISTRY_ZH.md)。
 
 观察性固定政策均值另提供[均值签名读取配置](docs/R3_POLICY_ENTRY_CONTRACT_ZH.md)，连接已有`R3_MEAN_SIGNATURE`：完整政策无支持时，需要独立审核全安排条件均值充分性及其评价范围，并由原生后端验证目标签名正支持。默认读取配置保持不变；此接入的离线验收不代表LLM准确率。
 

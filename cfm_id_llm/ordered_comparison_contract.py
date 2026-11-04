@@ -14,7 +14,7 @@ from .business_field_contract import Field as ReviewField
 from .quality_formulator import A0QualityValidationError
 
 CONTRACT = 'ordered-local-comparison-1'
-LOCAL_KINDS = ('DIRECT_EFFECT', 'SPILLOVER_EFFECT')
+LOCAL_KINDS = ('DIRECT_EFFECT', 'SPILLOVER_EFFECT', 'LOCAL_TOTAL_EFFECT')
 FORMS = ('ORDERED_DIFFERENCE', 'UNSPECIFIED')
 EXTRA_STATE_RULES = inline.EXTRA_STATE_RULES
 RULES = {
@@ -25,7 +25,7 @@ RULES = {
     'form': ReviewField('form', '原文是否确定要计算第一端减第二端。',
         'ORDERED_DIFFERENCE只声明该减法；方向未给或未定用UNSPECIFIED，不因为数值未知而判方向未知。引用本问的运算要求，不借用两端引用。', section='comparison_expression'),
 }
-GUIDANCE = '''本次局部比较使用comparison_expression，仅适用于DIRECT_EFFECT与SPILLOVER_EFFECT。其他目标类别保持原有comparison_order及semantics.intervention/comparator。
+GUIDANCE = '''本次局部比较使用comparison_expression，适用于DIRECT_EFFECT、SPILLOVER_EFFECT与LOCAL_TOTAL_EFFECT。LOCAL_TOTAL_EFFECT两端同时保留本人及同伴状态；其余安排按各端条件下的原设计平均，不是两份完整固定政策的TOTAL_EFFECT。其他目标类别保持原有comparison_order及semantics.intervention/comparator。
 局部比较必须返回comparison_expression={"form":"ORDERED_DIFFERENCE或UNSPECIFIED","first":字段值,"second":字段值,"refs":["本问运算要求的编号"]}；不再返回comparison_order或semantics.intervention/comparator。first与second只表示运算位置，始终计算first减second；不按编码大小、新旧或预期好坏排序。直接效应的两端是本人的两种状态，同伴条件放neighbor_exposure；同伴效应的两端须各保留本人的相同固定状态和该端同伴状态，不擅自指定本人状态。
 两个端各自可为STATED/INTERPRETED的value+refs、明确未定时MISSING的reason+refs，或UNKNOWN；不得使用NOT_APPLICABLE。端的内容未定不等于减法方向未定。方向未定用form=UNSPECIFIED，已知两端仍保留，但此时first/second不声明数学顺序。form引用与两端引用分别核对，不自动继承。
 例如原文问某做法使等待减少多少，先理解原问的减少量对应哪种状态减哪种状态，再分别填写两端，不把“采用该做法”固定当被减数。aggregation只写结果统计和汇总，不重复运算。评价名单、时期、按何规则平均其余安排仍写各自字段，不填进比较端。其他关于intervention/comparator/comparison_order的命名规则仅用于非局部目标，不用于这两个局部类别。类别、方向、字段内容及引用仍独立审核，程序只序列化，不修正模型答案。'''

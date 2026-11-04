@@ -6,7 +6,7 @@
 网络、结果定义和原试点规则放在普通业务材料里。当前 first LLM 只读取
 所问政策、评价名单、汇总方式和原始分配事实；不会批准 A4/A5 或边界。
 
-可复现的离线命令（在 仓库根目录运行）：
+可复现的离线命令（在 identification 子目录运行）：
   python -B -m examples.bounded_policy_fixture
   python -B -m unittest tests_gateway.test_bounded_policy -v
 
@@ -15,7 +15,7 @@ Windows PowerShell 在隔离环境运行全量 Gateway 回归前，显式指定�
   $env:PYTHONUTF8 = '1'
   $env:PYTHONIOENCODING = 'utf-8'
   $env:PYTHONDONTWRITEBYTECODE = '1'
-  $env:TEMP = Join-Path (Get-Location) 'outputs/tmp'
+  $env:TEMP = Join-Path (Get-Location).Path 'outputs\bounded_policy_tests'
   $env:TMP = $env:TEMP
   New-Item -ItemType Directory -Path $env:TEMP -Force | Out-Null
   python -B -m unittest discover -s tests_gateway -q

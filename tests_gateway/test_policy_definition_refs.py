@@ -106,7 +106,8 @@ def test_semantically_wrong_current_sources_still_require_review(defect,monkeypa
     if defect=='wrong_definition':raw['study']['source_ids']=raw['target']['source_ids']
     else:raw['information'][0]['source_ids']=raw['study']['source_ids']
     review=record(source.prepare(e,raw));review['decisions'][path]['source_coverage']='REJECTED'
-    monkeypatch.setattr(d.capabilities,'business_binding',lambda *_:pytest.fail('rejected source reached methods'))
+    from tests_gateway.test_fact_source_review import forbid_method_calls
+    forbid_method_calls(monkeypatch)
     r=d.execute(s,'q1',**o,source_review=review,research_protocol_selected=True)
     assert r['state']=='READING_RECHECK_REQUIRED' and not r['backend_called']
     assert not r['source_review_receipt']['citations_repaired']

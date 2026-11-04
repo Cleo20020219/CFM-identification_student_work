@@ -9,7 +9,8 @@ import json
 
 VERSION = 'reviewed-intent-handoff-1'
 READERS = ('NETWORK_FIXED_POLICY_FACTS', 'NETWORK_POLICY_CONTRAST_FACTS',
-           'NETWORK_RANDOMIZED_EFFECT_FACTS', 'NETWORK_OBSERVATIONAL_POLICY_FACTS')
+           'NETWORK_RANDOMIZED_EFFECT_FACTS', 'NETWORK_OBSERVATIONAL_POLICY_FACTS',
+           'NETWORK_RANDOMIZED_ARM_FACTS','NETWORK_FINITE_POLICY_FACTS','NETWORK_OBSERVATIONAL_EFFECT_FACTS')
 COMMON = ('analysis_unit', 'treatment', 'outcome')
 SEMANTICS = ('first_arrangement', 'second_arrangement', 'target_population',
              'aggregation', 'time_horizon', 'conditioning_context',

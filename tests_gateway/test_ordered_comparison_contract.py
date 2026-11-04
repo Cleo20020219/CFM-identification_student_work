@@ -21,6 +21,10 @@ def local_fixture(kind='DIRECT_EFFECT', reverse=False):
     case,data=material()
     qid='q1' if kind=='DIRECT_EFFECT' else 'q2'
     goal=data['questions'][qid]
+    if kind=='LOCAL_TOTAL_EFFECT':
+        replacement='自己启用且合作对象过半启用，与自己未启用且合作对象至多一半启用相比，本周顾客平均等待分钟数相差多少？前者减后者。'
+        case=case.model_copy(update=dict(business_question=case.business_question.replace(goal,replacement)))
+        goal=replacement
     if reverse:
         replacement=goal.replace('前者减后者','后者减前者')
         case=case.model_copy(update=dict(business_question=case.business_question.replace(goal,replacement)))
@@ -33,8 +37,9 @@ def local_fixture(kind='DIRECT_EFFECT', reverse=False):
         assignment_law=claim(data['docs']['assignment'],'assignment'),unit_network=claim(data['docs']['network'],'network'),
         exposure_mapping=claim(data['docs']['exposure'],'exposure'),network_pretreatment_status=claim('网络在处理前固定','network'),
         available_information=claim(data['docs']['information'],'information'),covariates=[])
-    first,second=(('自己启用','自己未启用') if kind=='DIRECT_EFFECT' else
-                  ('自己未启用且合作对象过半启用','自己未启用且合作对象至多一半启用'))
+    first,second={'DIRECT_EFFECT':('自己启用','自己未启用'),
+        'SPILLOVER_EFFECT':('自己未启用且合作对象过半启用','自己未启用且合作对象至多一半启用'),
+        'LOCAL_TOTAL_EFFECT':('自己启用且合作对象过半启用','自己未启用且合作对象至多一半启用')}[kind]
     if reverse:first,second=second,first
     raw=dict(common=common,queries=[dict(kind=kind,goal=claim(goal,'business_question'),semantics=dict(
         target_population=claim(data['docs']['population'],'population'),aggregation=claim('评价名单内等权平均','population'),
@@ -59,6 +64,10 @@ def execution(kind='DIRECT_EFFECT',reverse=False):
     if kind=='SPILLOVER_EFFECT':
         facts['target'].update(kind=kind)
         facts['target']['first'].update(own=0,exposure=1)
+        facts['target']['second'].update(own=0,exposure=0)
+    if kind=='LOCAL_TOTAL_EFFECT':
+        facts['target'].update(kind=kind)
+        facts['target']['first'].update(own=1,exposure=1)
         facts['target']['second'].update(own=0,exposure=0)
     if reverse:facts['target']['first'],facts['target']['second']=facts['target']['second'],facts['target']['first']
     return s,e,dict(query_review=q,candidate=facts,request_sha256=e['request_sha256'])

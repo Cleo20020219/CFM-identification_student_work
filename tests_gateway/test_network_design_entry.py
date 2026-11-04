@@ -149,6 +149,9 @@ def test_d6_science_is_separate_from_design_and_never_inferred(family,status,sta
     r=dispatch.execute(s,'q1',**o,research_protocol_selected=True)
     assert r['state']==state,(r['state'],r.get('reason_code'))
     assert not r['backend_called'] and not r['independent_replay'] and r['mathematical_claim'] is None
+    if family=='effect' and status=='NOT_ADOPTED':
+        assert r['reason_code']=='DECLARED_MODEL_EXCLUDES:'+fields.D6_CONDITION
+        assert '第一阶段配额方案' in r['processing_explanation']
 
 
 @pytest.mark.parametrize('family',['effect','policy','contrast'])
@@ -325,6 +328,8 @@ def test_recommended_public_entry_all_four_targets_keep_d6_e3_and_replay():
         from cfm_id_llm.target_first_reading import COMMON_FIELDS
         raw['common']={k:raw['common'].get(k,'UNRESOLVED' if k=='assignment_family' else 'UNKNOWN') for k in COMMON_FIELDS}
         sem.update(outcome=deepcopy(raw['common']['outcome']),decision_constraints='UNKNOWN')
+        sem.setdefault('neighbor_exposure','UNKNOWN')
+        sem.setdefault('standardization_distribution','UNKNOWN')
         s=intake.receive_candidate(s,raw,request_sha256=s.request_sha256)
         review=submit(s,record(sheet(s)))['query_review']
         e=dispatch.prepare_reader(s,'q1',query_review=review)

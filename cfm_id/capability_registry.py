@@ -42,6 +42,8 @@ def business_bindings():
     from . import network_bounded_dispatch as bounded, dag_method_dispatch as dag
     from . import network_effect_dispatch as effects
     from . import network_observational_policy_dispatch as observational
+    from . import network_extended_dispatch as extended
+    from cfm_id_llm import network_extended_reading as extended_reading
     from .workflows import policy_difference
     from . import bounded_policy_solver, bounded_policy_verify
     from . import bounded_contrast_solver, bounded_contrast_verify, fixed_comparison
@@ -77,7 +79,7 @@ def business_bindings():
                 (dag_routes[method].adapter_type.replay,)) for method in dag.METHODS),
             dag.inspect_methods, dag.native_reviews_from_json, dag._execute_plan),
         BusinessBinding(effects.FAMILY, 'UNIT_NETWORK', effects.TARGET_KINDS,
-            'D1-D6/E1-E5 within native contracts: either direction of direct or spillover contrasts averaged under the original conditional design; explicit fixed evaluation population and synthetic research reviews.',
+            'Direct, spillover and local total contrasts under the original conditional design; explicit fixed evaluation population and reviews. D1/strict-majority supports external review; other native D1-D6/E1-E5 combinations retain synthetic-only admission. Complete-policy TOTAL_EFFECT uses the separate contrast reader.',
             (MethodBinding(effects.METHOD,(effects.METHOD,),
                 (identify_randomized_network_batch,network.identify_network_business_query,identify_verified_linear_target),
                 (network.replay_verified_business_outcome,replay_verified_composition)),),
@@ -90,7 +92,18 @@ def business_bindings():
                 (network.identify_network_business_query,), (network.replay_verified_business_outcome,))),
             observational.inspect_methods,observational.native_reviews_from_json,observational._execute_plan,
             note_review=True,assignment_family='OBSERVATIONAL'),
-    )
+    ) + tuple(BusinessBinding(family,'UNIT_NETWORK',kinds,scope,
+        tuple(MethodBinding(m,(m,),(network.identify_network_business_query,),
+            (network.replay_verified_business_outcome,)) for m in extended.METHODS[family]),
+        extended.inspect_methods,extended.native_reviews_from_json,extended._execute_plan,
+        note_review=True,assignment_family=regime)
+        for family,kinds,scope,regime in (
+            (extended_reading.ARM,('NETWORK_DESIGN_STANDARDIZED_ARM_MEAN',),
+             'One explicit node-arm mean under original conditional design; D1-D6/E1-E5, synthetic review.',None),
+            (extended_reading.MIX,('STOCHASTIC_POLICY_VALUE',),
+             'Explicit finite complete policies and positive weights; each component independently verified R1b; synthetic review.',None),
+            (extended_reading.OBS,effects.TARGET_KINDS,
+             'Fixed-W observed-law standardized effects or separately licensed shared-stratum/local-binary-covariate exposure effects; native A4 and scope guards retained; synthetic review.','OBSERVATIONAL')))
     keys = [(b.structure, kind, b.assignment_family) for b in bindings for kind in b.target_kinds]
     if len(set(keys)) != len(keys) or len({b.reader_id for b in bindings}) != len(bindings):
         raise RegistryError('DUPLICATE_BUSINESS_REGISTRATION')

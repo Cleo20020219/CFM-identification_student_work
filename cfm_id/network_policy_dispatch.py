@@ -141,7 +141,8 @@ def inspect_methods(entry, raw, *, note_review=None, information_evidence_review
             entry=dict(entry,reading_note_review=deepcopy(notes['review']))
         if _mean_order_context is not None or c.bounded_model is not None or any(s.availability=='EXACT_POPULATION_VALUE' for s in c.information):
             from .network_bounded_dispatch import prepare
-            return prepare(entry,raw,c,out,_mean_order_context=_mean_order_context)
+            from .network_contrast_context import bind_single_policy
+            return bind_single_policy(entry,contract,c.study,prepare(entry,raw,c,out,_mean_order_context=_mean_order_context))
         usable = []
         for i,source in enumerate(c.information):
             if source.operator=='OTHER':
@@ -184,8 +185,9 @@ def inspect_methods(entry, raw, *, note_review=None, information_evidence_review
                 clarification_questions=['请先核对可用总体信息及其范围；若希望使用暴露分组信息，还需独立说明是否采用覆盖目标对象、所有完整安排的均值充分性。'])
         out['proposed_target'] = target_coordinates(c)
         binding = sha(dict(entry=entry,raw=raw,methods=out['methods'],exclusions=out['exclusions'],target=out['proposed_target']))
-        return dict(out,state='REVIEW_REQUIRED',plan_sha256=binding,
-                    plan_worksheet=worksheet(binding,PLAN_DECISIONS))
+        from .network_contrast_context import bind_single_policy
+        return bind_single_policy(entry,contract,c.study,dict(out,state='REVIEW_REQUIRED',plan_sha256=binding,
+                    plan_worksheet=worksheet(binding,PLAN_DECISIONS)))
     except DispatchError as exc:
         return dict(out,state=exc.state,reason_code=exc.reason)
     except (ValueError, TypeError, KeyError, AttributeError, ZeroDivisionError):

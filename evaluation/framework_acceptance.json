@@ -127,7 +127,8 @@
     "tests_gateway/test_target_first_skill.py",
     "tests_gateway/test_reviewed_intent_handoff.py",
     "tests_gateway/test_target_first_native_compatibility.py",
-    "tests_gateway/test_shared_fact_definitions.py"
+    "tests_gateway/test_shared_fact_definitions.py",
+    "tests_gateway/test_local_total_effect.py"
   ],
   "common_obligations": [
     {
@@ -2982,6 +2983,20 @@
         "tests_gateway/test_shared_fact_definitions.py::test_old_profile_keeps_record_local_evidence_and_new_rechecks_keep_contract",
         "tests_gateway/test_shared_fact_definitions.py::test_explicit_network_evidence_and_distribution_labels_are_lossless",
         "tests_gateway/test_shared_fact_definitions.py::test_empty_bounds_are_not_a_model_and_other_reader_families_keep_their_contract"
+      ]
+    },
+    {
+      "id": "LOCAL_TOTAL_CONTRAST_V1",
+      "title": "局部总效应与完整政策比较分路，审核、符号方向及native重放",
+      "nodes": [
+        "tests_gateway/test_local_total_effect.py::test_default_reading_native_total_and_signed_linear_proof[False]",
+        "tests_gateway/test_local_total_effect.py::test_default_reading_native_total_and_signed_linear_proof[True]",
+        "tests_gateway/test_local_total_effect.py::test_complete_policy_total_keeps_its_reader",
+        "tests_gateway/test_local_total_effect.py::test_total_missing_conditions_or_changed_target_never_execute[same_own]",
+        "tests_gateway/test_local_total_effect.py::test_total_missing_conditions_or_changed_target_never_execute[same_exposure]",
+        "tests_gateway/test_local_total_effect.py::test_total_missing_conditions_or_changed_target_never_execute[finite_sample]",
+        "tests_gateway/test_local_total_effect.py::test_total_missing_conditions_or_changed_target_never_execute[pending_science]",
+        "tests_gateway/test_local_total_effect.py::test_total_missing_conditions_or_changed_target_never_execute[stale_direction]"
       ]
     }
   ]

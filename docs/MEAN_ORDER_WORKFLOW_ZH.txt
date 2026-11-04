@@ -15,7 +15,7 @@ tests_gateway/test_mean_order_workflow.py：权限、缺项、错目标、错来
 
 三个最直观的真实回复重放案例
 以下是原开发目录的历史记录位置，不随当前源码包分发；需要自备相应材料才能执行这部分历史重放。无需模型档案的验收入口见根目录 README。
-LOCAL_EVIDENCE_NOT_DISTRIBUTED
+../../local_results/mean_order_workflow_integration_20261024/final/cases/mean_order_locked_acceptance_20261024/
   n04：POINT，目标差为1/2。
   n01：PARTIAL，sharp区间[3/5, 1]。
   n21：NEEDS_INPUT，评价名单未知；追问全体、指定子集或单个对象，不补成全体。
@@ -25,11 +25,11 @@ LOCAL_EVIDENCE_NOT_DISTRIBUTED
 
 Windows PowerShell运行
 先进入当前源码目录：
-# 在克隆后的仓库根目录运行
+# 在独立 Identification 仓库根目录执行
 
 使用已安装项目依赖的Python 3.11+。本轮实际使用的本地解释器：
 $py = "python"
-$case = "LOCAL_EVIDENCE_NOT_DISTRIBUTED"
+$case = "..\..\local_results\mean_order_workflow_integration_20261024\final\cases\mean_order_locked_acceptance_20261024\n04"
 
 1. 导出请求，仅含公开材料、目录和Schema：
 & $py -B -m evaluation.mean_order_workflow request --bundle "$case\bundle.json" --output .\my_request.json

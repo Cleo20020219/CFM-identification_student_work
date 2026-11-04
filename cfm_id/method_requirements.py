@@ -11,6 +11,7 @@ from . import network_effect_dispatch as effects
 from . import network_observational_policy_dispatch as observational
 from cfm_id_llm.network_design_reading import D6_CONDITION
 from cfm_id_llm.query_conditioning_contract import MATCH_DECISION
+from cfm_id_llm.network_effect_conditioning import SCOPE_DECISION
 
 FAMILY = policy.FAMILY
 DIAGNOSTIC_SCOPES = {FAMILY: 'FIXED_POLICY_MEAN', contrast.FAMILY: 'ORDERED_POLICY_MEAN_DIFFERENCE',
@@ -40,6 +41,7 @@ LABELS = {
     observational.SIGNATURE_READING_DECISIONS[0]: '同伴暴露定义、同一固定背景下的均值充分性及明确作用范围',
     observational.SIGNATURE_SCIENCE_DECISIONS[0]: '全部评价对象在所有完整二元安排下的条件均值签名充分性',
     MATCH_DECISION: '事实阶段的固定背景与已审核业务目标一致，须独立核对原文',
+    SCOPE_DECISION: '目标条件仅为处理前固定研究背景W，不包含额外子群筛选、处理后条件或跨背景平均',
     policy.R2_SCIENCE_DECISIONS[0]: '覆盖目标对象、所有完整安排的均值签名充分性',
     bounded.MODEL_DECISIONS[0]: '精确 A4 数值及总体信息范围完整',
     bounded.MODEL_DECISIONS[1]: '科学界限的类型、单位、范围及全体模型对象',

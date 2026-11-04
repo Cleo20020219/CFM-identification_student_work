@@ -127,7 +127,7 @@ def audit_draft(case: BusinessCase, draft: DraftProblemSpec, *, provider: str,
     if (draft.structure.unit_network.basis != "UNRESOLVED"
             and draft.structure.exposure_mapping.basis == "UNRESOLVED"
             and draft.target.kind in {
-                TargetKind.DIRECT_EFFECT, TargetKind.SPILLOVER_EFFECT, TargetKind.TOTAL_EFFECT,
+                TargetKind.DIRECT_EFFECT, TargetKind.SPILLOVER_EFFECT, TargetKind.LOCAL_TOTAL_EFFECT, TargetKind.TOTAL_EFFECT,
                 TargetKind.NETWORK_DESIGN_STANDARDIZED_ARM_MEAN
             }
             and not fixed_other_direct):

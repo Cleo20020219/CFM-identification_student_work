@@ -1,5 +1,6 @@
 """Source roles precede coverage claims; accepted source review never grants science."""
 from copy import deepcopy
+from dataclasses import replace
 import json
 import pytest
 from cfm_id import business_dispatch as d,business_intake as intake,business_case
@@ -25,6 +26,14 @@ def record(w, decision='ACCEPTED'):
         source_ids=list(w['source_catalog'])) for p in w['fields']})
 
 
+def forbid_method_calls(monkeypatch):
+    """Permit metadata lookup, but fail on either method inspection or execution."""
+    lookup=d.capabilities.business_binding
+    def forbidden(*args,**kwargs):pytest.fail('source before methods')
+    monkeypatch.setattr(d.capabilities,'business_binding',lambda reader_id:
+        replace(lookup(reader_id),inspect=forbidden,execute=forbidden))
+
+
 @pytest.mark.parametrize('kind',['r1b','r2','partial','contrast_point','contrast_partial','effect','r3'])
 def test_source_review_preserves_target_and_native_certificate_replay(kind):
     s,e,o=fixture(kind);before=deepcopy(o['candidate']);baseline=d.inspect_methods(s,'q1',**o)
@@ -48,8 +57,9 @@ def test_source_review_preserves_target_and_native_certificate_replay(kind):
 def test_source_gate_blocks_before_method_inspection(monkeypatch,kind,decision):
     s,e,o=fixture(kind);o['source_review']=record(source.prepare(e,o['candidate']))
     o['source_review']['decisions']['']['field_role']=decision
-    monkeypatch.setattr(d.capabilities,'business_binding',lambda *_:pytest.fail('source before methods'))
-    # Reader preparation uses reader_for/business_bindings, not business_binding.
+    # Preparation may inspect registration metadata. The guard applies to
+    # method inspection/execution, which must remain unreachable without review.
+    forbid_method_calls(monkeypatch)
     r=d.execute(s,'q1',**o,research_protocol_selected=True)
     assert r['state']==('REVIEW_REQUIRED' if decision=='PENDING' else 'READING_RECHECK_REQUIRED')
     assert not r['backend_called'] and r['mathematical_claim'] is None and 'plan_worksheet' not in r

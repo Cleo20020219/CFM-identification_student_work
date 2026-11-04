@@ -9,8 +9,11 @@
 | 随机化局部效应 | `readers/local_effect_lifecycle` 配对 legacy / role / owned / scoped 既有实现；解析须消费已审核局部请求 | `network_effect_dispatch` |
 | R3 观察性政策 | `network_observational_policy_reading`及显式`network_observational_signature_reading`配置；复用构造/解析，固定背景须跨阶段独立交接，均值充分性单独审核 | `network_observational_policy_dispatch` |
 | 变量 DAG | `dag_query_reading`；保留干预值、查询范围及原生投影 | `dag_method_dispatch` |
+| 单个设计平均状态均值 | `network_extended_reading`；明确本人/同伴状态、评价范围与原设计条件平均 | `network_extended_dispatch` |
+| 有限混合政策均值 | `network_extended_reading`；有限完整政策及正权重，逐政策审核和重放 | `network_extended_dispatch` |
+| 观察性网络效应 | `network_extended_reading`；分别保留观测律标准化、共享层调整和局部协变量调整的合同 | `network_extended_dispatch` |
 
-这是读取合同的分类，不是业务用户必须选择的五种数学方法。数学覆盖仍只有 `cfm_id.capability_registry` 一处运行登记；一份读取合同可能交给多个已有数学方法检查。
+这是读取合同的分类，不是业务用户必须选择的八种数学方法。数学覆盖仍只有 `cfm_id.capability_registry` 一处运行登记；一份读取合同可能交给多个已有数学方法检查。
 
 两政策读取登记现复用 `TargetContextHandoff` 交接明确固定背景：首次请求不增加字段或提示，重读定位复用 `/study/context`；业务适配器独立要求目标匹配和条件模型审核，见[合同](FIXED_BACKGROUND_CONTRAST_ZH.md)。这不增加一个新定理或业务路由。
 

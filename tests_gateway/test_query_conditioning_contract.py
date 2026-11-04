@@ -170,12 +170,17 @@ def test_two_queries_keep_distinct_conditions_and_cannot_swap_reviews(tmp_path):
     assert d.prepare_reader(restored,'q2',query_review=second_review)==e2
 
 
-def test_other_readers_do_not_silently_drop_explicit_conditions():
+def test_single_policy_reader_preserves_explicit_conditions_for_native_review():
     from tests_gateway.test_target_summary_contract import fixture
     case,raw=fixture();raw=wire(raw);sem=raw['queries'][0]['semantics'];sem[c.FIELD]=deepcopy(sem['target_population'])
     s=receive(case,raw,profile=c.CONTRACT);review=submit(s,record(sheet(s)))['query_review']
     result=d.prepare_reader(s,'q1',query_review=review)
-    assert result['state']=='ADAPTER_NOT_CONNECTED' and result['reason_code']=='CONDITIONED_TARGET_NOT_CONNECTED_TO_SELECTED_READER'
+    assert result['state']=='READY_TO_READ'
+    assert result['reader_id']=='NETWORK_FIXED_POLICY_FACTS'
+    actual=result['reviewed_target_context']['conditioning_context']
+    assert actual['state']==sem[c.FIELD]['state'] and actual['value']==sem[c.FIELD]['value']
+    assert actual['refs']==['s0001']  # Existing short-reference transport, same original source.
+    assert c.admission(result['reviewed_target_context'],'UNREGISTERED_READER')==('ADAPTER_NOT_CONNECTED','CONDITIONED_TARGET_NOT_CONNECTED_TO_SELECTED_READER')
     sem[c.FIELD]='UNKNOWN';s=receive(case,raw,profile=c.CONTRACT);review=submit(s,record(sheet(s)))['query_review']
     assert d.prepare_reader(s,'q1',query_review=review)['state']=='READY_TO_READ'
 

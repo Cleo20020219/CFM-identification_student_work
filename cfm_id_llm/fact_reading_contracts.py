@@ -1,4 +1,4 @@
-"""Closed lifecycle bindings for all five supported business reader families.
+"""Closed lifecycle bindings for the registered business reader families.
 
 This registry pairs existing reading components. It does not select a causal
 method, interpret text, grant reviews, load caller-provided code, or change a
@@ -116,10 +116,14 @@ class FactReadingContract:
 
     def public_constraints(self, entry, paths):
         self.check_entry(entry)
+        extra = []
+        if self.reader_id == 'NETWORK_RANDOMIZED_EFFECT_FACTS':
+            from .assumption_choices import field_constraints
+            extra = field_constraints(paths)
         if self.contextual_constraints is not None:
             rows = self.contextual_constraints(entry, paths)
             if entry.get('reviewed_intent') is None:
-                return rows  # Preserve the historical contextual receipt.
+                return rows + extra
         else:
             rows = self.field_constraints(paths, request=entry['request']) if self.field_constraints else []
         if self.target_context is not None and entry.get('reviewed_target_context'):
@@ -127,7 +131,7 @@ class FactReadingContract:
         if entry.get('reviewed_intent') is not None:
             from .reviewed_intent_handoff import field_constraints
             rows += field_constraints(paths)
-        return rows
+        return rows + extra
 
 
 def registrations():
@@ -177,7 +181,9 @@ def registrations():
             version_field=None, wire_version=protocol.wire_version,
             make_request=protocol.make_request, parse=protocol.parse,
             reference_catalog=policy.reference_catalog, model=protocol.model,
-            documents=policy.documents, target_context=None,
+            documents=policy.documents, target_context=TargetContextHandoff(
+                conditioning.preserve_contrast_request, conditioning.contrast_conditioning_constraints,
+                conditioning.MATCH_DECISION, conditioning.CONTRAST_DESCRIPTION),
             profile_field='network_fact_contract', profile=profile,
             uses_assignment_semantics=True, field_constraints=protocol.public_constraints))
         contrasts.append(FactReadingContract(
@@ -208,7 +214,8 @@ def registrations():
         target_context=None, uses_assignment_semantics=True, uses_network_profile=True,
         contextual_parse=effects.parse, contextual_constraints=effects.field_constraints)
         for profile,module,model in effects.variants())
-    return (r3, r3_signature, r3_definitions, *policies, *contrasts, dag_contract, *local)
+    from .network_extended_reading import contracts as extended_contracts
+    return (r3, r3_signature, r3_definitions, *policies, *contrasts, dag_contract, *local, *extended_contracts())
 
 
 def _family(reader_id):

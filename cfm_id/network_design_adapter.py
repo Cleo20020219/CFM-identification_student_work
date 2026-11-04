@@ -70,7 +70,10 @@ def extra_science(c):
     return (fields.D6_CONDITION,) if c.assignment.kind == 'TWO_STAGE_QUOTA_MIXTURE' else ()
 
 
-def make_arm(c, network, *, source, evidence):
+def make_arm(c, network, *, source, evidence, authority='SYNTHETIC_TEST'):
+    if authority not in ('SYNTHETIC_TEST', 'EXTERNAL_RESEARCH_REVIEW'):
+        raise ValueError('EXPLICIT_RESEARCH_AUTHORITY_REQUIRED')
+    synthetic = authority == 'SYNTHETIC_TEST'
     from pfn_pipeline import identification as native
     makers = {
         'INDEPENDENT_BERNOULLI': native.make_heterogeneous_bernoulli_arm_task,
@@ -92,6 +95,6 @@ def make_arm(c, network, *, source, evidence):
         node_id=c.target.population[0], own_treatment_value=c.target.first.own,
         exposure_value=c.target.first.exposure,
         exposure_definition='strict_majority' if grouping=='strict_majority_ties_low' else grouping,
-        source=source, evidence=evidence, admitted=True, synthetic=True,
-        query_authority='TRUSTED_FIXTURE',
+        source=source, evidence=evidence, admitted=True, synthetic=synthetic,
+        query_authority='TRUSTED_FIXTURE' if synthetic else 'HUMAN_CONFIRMED',
         outcome_kind='continuous' if c.study.outcome_kind=='COUNT' else c.study.outcome_kind.lower())

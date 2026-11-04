@@ -10,19 +10,30 @@ from fractions import Fraction
 from .business_dispatch import (sha, worksheet, checked_review, DispatchReview,
     DispatchError, empty_result, PLAN_DECISIONS)
 from cfm_id_llm import network_effect_reading as reading
+from cfm_id_llm import network_effect_conditioning as conditioning
 from cfm_id_bridge.scientific_binding import canonical_data
 from . import network_design_adapter as design_adapter
 from cfm_id_llm import network_design_reading as design_fields
+from cfm_id_llm import assumption_choices
 
 FAMILY = 'NETWORK_RANDOMIZED_EFFECT_FACTS'
 METHOD = 'R1A_COMPOSITION'
-TARGET_KINDS = ('DIRECT_EFFECT', 'SPILLOVER_EFFECT')
+TARGET_KINDS = ('DIRECT_EFFECT', 'SPILLOVER_EFFECT', 'LOCAL_TOTAL_EFFECT')
 READING_DECISIONS = ('local_states_and_first_minus_second_direction',
     'evaluation_population_fixed_before_assignment_and_weights',
     'remaining_assignments_follow_original_conditional_design',
     'native_symbols_match_business_variables_and_context', 'all_information_and_restrictions_preserved', 'source_entailment')
 SCIENCE_DECISIONS = ('known_assignment_law', 'full_vector_randomization', 'consistency',
     'fixed_pretreatment_network', 'finite_conditional_first_moments', 'a4_operator_scope_and_provenance')
+# R1a averages the remaining assignments under the original conditional design;
+# it does not use exposure mean sufficiency. Keep this adapter contract public.
+ASSUMPTION_REQUIREMENTS = frozenset(SCIENCE_DECISIONS)
+SCIENCE_LABELS = {
+    design_fields.D6_CONDITION: '最终完整处理名单相同时，第一阶段配额方案不再直接影响结果',
+    'assignment_outcome_independence': '给定本次背景，完整处理安排与潜在结果独立',
+    'consistency': '实际观察结果对应实际完整安排下的潜在结果',
+    'finite_conditional_means': '本次所需的总体条件均值存在且有限',
+}
 
 
 def canonical_model(plan):
@@ -68,6 +79,10 @@ def inspect_methods(entry, raw, *, note_review=None):
         c=canonical_model(entry).model_validate(decoded['facts']);t=c.target
         out.update(decoded,reading_candidate=deepcopy(raw),bundle=deepcopy(entry['bundle']))
         missing,unsupported=[],[]
+        choices = assumption_choices.applicability(c.assumption_choices, required_conditions=ASSUMPTION_REQUIREMENTS)
+        out['assumption_choices_review'] = dict(method=METHOD, required_conditions=sorted(ASSUMPTION_REQUIREMENTS),
+            **deepcopy(choices), scientific_approval=False)
+        missing += choices['missing']; unsupported += choices['blocked']
         if t.kind in TARGET_KINDS and t.kind!=entry['selected_query']['target']['kind']:
             return dict(out,state='READING_RECHECK_REQUIRED',reason_code='EFFECT_TARGET_DISAGREES_WITH_REVIEWED_QUERY')
         assignment_question = design_adapter.assignment_availability_question(c.design_facts.assignment_rule_available)
@@ -81,7 +96,7 @@ def inspect_methods(entry, raw, *, note_review=None):
             if condition.status=='CONFLICTING':
                 return dict(out,state='READING_RECHECK_REQUIRED',reason_code='CONFLICTING_EFFECT_SCIENCE_STATEMENTS')
             if condition.status in ('NOT_STATED','UNDECIDED'):
-                missing.append('请研究者核对原文的科学条件声明：'+name+'；读取缺项不等于原文没有。')
+                missing.append('本次计算需要以下条件，请说明是否采用：“'+SCIENCE_LABELS[name]+'”。不知道或尚未决定也可以说明。')
             elif condition.status=='NOT_ADOPTED': unsupported.append('DECLARED_MODEL_EXCLUDES:'+name)
         if c.additional_restrictions: unsupported.append('ADDITIONAL_EFFECT_MODEL_REQUIRES_SEPARATE_ADAPTER')
         if c.study.graph_kind=='OTHER' or c.study.outcome_kind=='OTHER': unsupported.append('EFFECT_STUDY_SCOPE_NOT_CONNECTED')
@@ -111,11 +126,19 @@ def inspect_methods(entry, raw, *, note_review=None):
         if not all((c.study.source_ids,c.assignment.source_ids,t.source_ids,t.first.source_ids,t.second.source_ids)):
             missing.append('研究结构、原设计、比较方向和两端状态均须有各自的原文来源。')
         out.update(clarification_questions=list(dict.fromkeys(missing)),unsupported_reasons=unsupported)
+        if c.additional_restrictions:
+            out['processing_explanation'] = '读取结果保留了以下额外声明，当前方法尚未处理其含义：' + '；'.join(n.text for n in c.additional_restrictions)
+        elif choices['blocked']:
+            out['processing_explanation'] = '材料还声明了已采用、拟采用、被断言不成立或相互冲突的假设；本路线不能忽略这些模型声明。'
+        elif any(code.startswith('DECLARED_MODEL_EXCLUDES:') for code in unsupported):
+            names=[SCIENCE_LABELS[code.split(':',1)[1]] for code in unsupported if code.startswith('DECLARED_MODEL_EXCLUDES:')]
+            out['processing_explanation']='本次明确不采用“'+'；'.join(names)+'”。当前方法需要这些条件，因此没有执行识别；这不是不可识别证明。'
         if unsupported: return dict(out,state='ADAPTER_NOT_CONNECTED',reason_code=unsupported[0])
         if missing: return dict(out,state='NEEDS_INPUT',reason_code='NETWORK_EFFECT_FACTS_INCOMPLETE')
         a,e=t.first.own,t.first.exposure;b,f=t.second.own,t.second.exposure
         if (t.kind=='DIRECT_EFFECT' and not (a!=b and e==f)) or (
-                t.kind=='SPILLOVER_EFFECT' and not (a==b and e!=f)):
+                t.kind=='SPILLOVER_EFFECT' and not (a==b and e!=f)) or (
+                t.kind=='LOCAL_TOTAL_EFFECT' and not (a!=b and e!=f)):
             return dict(out,state='READING_RECHECK_REQUIRED',reason_code='LOCAL_CONTRAST_DOES_NOT_MATCH_EFFECT_KIND',
                 clarification_questions=['请核对效应名称、两端条件和相减方向；系统不会交换两端或补齐基准。'])
         if not c.information or all(s.operator=='FINITE_SAMPLE' or s.availability=='FINITE_SAMPLE' for s in c.information):
@@ -151,9 +174,14 @@ def inspect_methods(entry, raw, *, note_review=None):
             return dict(out,state=notes['state'],reason_code=notes['reason_code'],clarification_questions=notes['clarification_questions'])
         if notes['review'] is not None: entry=dict(entry,reading_note_review=deepcopy(notes['review']))
         target=target_coordinates(c)
+        reading_decisions = READING_DECISIONS
+        context = entry.get('reviewed_target_context')
+        if conditioning.has_explicit_context(context):
+            out['target_conditioning_review'] = conditioning.review_item(context, c.study)
+            reading_decisions = (*READING_DECISIONS, *conditioning.DECISIONS)
         binding=sha(dict(entry=entry,raw=raw,target=target,source_index=eligible[0]))
         row=dict(method=METHOD,source_index=eligible[0],applicability='NOT_CHECKED_BEFORE_SCIENCE_REVIEW',
-            reading_worksheet=worksheet(binding,READING_DECISIONS),science_worksheet=worksheet(binding,(*SCIENCE_DECISIONS,*design_adapter.extra_science(c))))
+            reading_worksheet=worksheet(binding,reading_decisions),science_worksheet=worksheet(binding,(*SCIENCE_DECISIONS,*design_adapter.extra_science(c))))
         binding=sha(dict(entry=entry,raw=raw,methods=[row],target=target))
         return dict(out,state='REVIEW_REQUIRED',proposed_target=target,methods=[row],plan_sha256=binding,
             plan_worksheet=worksheet(binding,PLAN_DECISIONS))
@@ -196,14 +224,16 @@ def _compile(plan, row, records):
     net=NetworkExposureSpec(network_id='effect_'+sha(dict(study=c.study.model_dump(),context=c.study.context)),
         node_ids=c.study.nodes,undirected_edges=c.study.edges)
     evidence=records['science_review'].evidence+'; review='+sha(records['science_review'].model_dump(mode='json'))
+    authority=records['science_review'].authority
     task=design_adapter.make_arm(c,net,
-        source='Reviewed original source locators: '+','.join(s.source_ids), evidence=evidence)
+        source='Reviewed original source locators: '+','.join(s.source_ids), evidence=evidence,
+        authority=authority)
     source=declare_a4_source(task,source_id='reviewed_effect_source_'+str(row['source_index']),operator=s.operator,
         provenance='Reviewed original source locators: '+','.join(s.source_ids),admission='ADMITTED',
         availability=s.availability,regime='experimental',outcome_nodes=tuple(s.outcome_nodes),node_order=tuple(c.study.nodes),
         arm_cells=tuple((v.node,v.own,v.exposure) for v in s.arm_cells))
-    if t.kind=='DIRECT_EFFECT' and t.first.own==0:
-        # The named native DIRECT recipe is specifically (1,e)-(0,e).
+    if t.kind in ('DIRECT_EFFECT','LOCAL_TOTAL_EFFECT') and t.first.own==0:
+        # Named DIRECT/TOTAL recipes put own treatment 1 in the first arm.
         # Compile the reviewed opposite target into its existing linear API;
         # never swap the business endpoints or negate a displayed formula.
         from pfn_pipeline.identification_composition import ArmLinearTerm
@@ -211,9 +241,11 @@ def _compile(plan, row, records):
         request=tuple(ArmLinearTerm(n,arm.own,arm.exposure,sign*weight)
             for n in t.population for arm,sign in ((t.first,1),(t.second,-1)))
     else:
-        request=EffectQueryV18('DIRECT' if t.kind=='DIRECT_EFFECT' else 'SPILLOVER',
+        request=EffectQueryV18({'DIRECT_EFFECT':'DIRECT','SPILLOVER_EFFECT':'SPILLOVER',
+                               'LOCAL_TOTAL_EFFECT':'TOTAL'}[t.kind],
             tuple((n,'1') for n in t.population),t.second.exposure,t.first.exposure,spillover_own_treatment=t.first.own,
-            cohort_authority='TRUSTED_FIXTURE',cohort_evidence='Reviewed fixed evaluation population: '+','.join(t.population_fixed_before_assignment.source_ids))
+            cohort_authority=('TRUSTED_FIXTURE' if authority=='SYNTHETIC_TEST' else 'HUMAN_CONFIRMED_PRETREATMENT'),
+            cohort_evidence='Reviewed fixed evaluation population: '+','.join(t.population_fixed_before_assignment.source_ids))
     return task,source,request
 
 
@@ -221,9 +253,11 @@ def _execute_reverse_linear(plan,out,batch,source,terms,original):
     """Bind the reviewed target to unchanged native linear proof and replay APIs."""
     from pfn_pipeline import identification_composition as native
     c=canonical_model(plan).model_validate(plan['facts']);t=c.target
-    if not (t.kind=='DIRECT_EFFECT' and t.first.own==0 and t.second.own==1 and
-            t.first.exposure==t.second.exposure and target_coordinates(c)==plan['proposed_target']):
-        raise ValueError('REVERSED_DIRECT_TARGET_REQUIRED')
+    matching_exposure=(t.first.exposure==t.second.exposure if t.kind=='DIRECT_EFFECT'
+                       else t.kind=='LOCAL_TOTAL_EFFECT' and t.first.exposure!=t.second.exposure)
+    if not (t.kind in ('DIRECT_EFFECT','LOCAL_TOTAL_EFFECT') and t.first.own==0 and t.second.own==1 and
+            matching_exposure and target_coordinates(c)==plan['proposed_target']):
+        raise ValueError('REVERSED_LOCAL_EFFECT_TARGET_REQUIRED')
     expected={(n,arm.own,arm.exposure):sign*Fraction(1,len(t.population))
         for n in t.population for arm,sign in ((t.first,1),(t.second,-1))}
     actual={term.coordinates:term.coefficient for term in terms}
@@ -267,17 +301,35 @@ def _execute_reverse_linear(plan,out,batch,source,terms,original):
 def _execute_plan(plan, *, plan_review=None, native_reviews=None, research_protocol_selected=False):
     out=dict(empty_result(),query_id=plan['query_id'],remaining_query_ids=plan['remaining_query_ids'],
         result_scope='SELECTED_QUERY_ONLY',fact_family=FAMILY,plan_sha256=plan['plan_sha256'],attempts=[])
+    if 'assumption_choices_review' in plan:
+        out['assumption_choices_review'] = deepcopy(plan['assumption_choices_review'])
+    if 'target_conditioning_review' in plan:
+        out['target_conditioning_review'] = deepcopy(plan['target_conditioning_review'])
     try:
         if research_protocol_selected is not True: raise DispatchError('REVIEW_REQUIRED','EXPLICIT_RESEARCH_PROTOCOL_SELECTION_REQUIRED')
         review=checked_review(plan_review,plan['plan_worksheet'])
         if review.authority!=plan['query_review']['authority']: raise ValueError('EFFECT_REVIEW_AUTHORITY_MISMATCH')
-        if review.authority!='SYNTHETIC_TEST': raise DispatchError('CHECK_BLOCKED','EFFECT_REQUIRES_SYNTHETIC_RESEARCH_AUTHORITY')
+        if review.authority=='EXTERNAL_RESEARCH_REVIEW':
+            facts=canonical_model(plan).model_validate(plan['facts'])
+            if (facts.assignment.kind!='INDEPENDENT_BERNOULLI'
+                    or facts.exposure.kind!='STRICT_MAJORITY_TIES_LOW'):
+                raise DispatchError('ADAPTER_NOT_CONNECTED','EXTERNAL_EFFECT_DESIGN_NOT_CONNECTED')
         if native_reviews is None: raise DispatchError('REVIEW_REQUIRED','EFFECT_READING_AND_SCIENCE_REVIEWS_REQUIRED')
         if len(plan['methods'])!=1 or plan['methods'][0]['method']!=METHOD: raise ValueError('EXACT_EFFECT_METHOD_REQUIRED')
         row=plan['methods'][0];pair=native_reviews_from_json(plan,native_reviews)[METHOD]
         for key,sheet in (('reading_review','reading_worksheet'),('science_review','science_worksheet')):
             pair[key]=checked_review(pair[key],row[sheet])
             if pair[key].authority!=review.authority: raise ValueError('EFFECT_REVIEW_AUTHORITY_MISMATCH')
+        if review.authority=='EXTERNAL_RESEARCH_REVIEW':
+            # The existing native batch constructor declares every node-arm.
+            # Do not widen a real source that only covers the selected contrast.
+            source=facts.information[row['source_index']]
+            complete_nodes=set(source.outcome_nodes)==set(facts.study.nodes)
+            complete_cells={(n,a,s) for n in facts.study.nodes for a in (0,1) for s in (0,1)}
+            supplied_cells={(v.node,v.own,v.exposure) for v in source.arm_cells}
+            if (not complete_nodes or (source.operator=='NODE_ARM_MEANS' and
+                    not complete_cells<=supplied_cells)):
+                raise DispatchError('ADAPTER_NOT_CONNECTED','EXTERNAL_EFFECT_FULL_BATCH_INFORMATION_REQUIRED')
         task,source,request=_compile(plan,row,pair)
         original=sha(_native_payload([task,source,request]))
         from pfn_pipeline import identification_business as core
@@ -290,7 +342,7 @@ def _execute_plan(plan, *, plan_review=None, native_reviews=None, research_proto
             return dict(out,state=anchor.status,reason_code=anchor.reason_code,partial_fallback_performed=False)
         batch=identify_randomized_network_batch(task)
         if sha(_native_payload(batch.template))!=sha(_native_payload(task)): raise ValueError('EFFECT_BATCH_INPUT_MISMATCH')
-        if plan['proposed_target']['kind']=='DIRECT_EFFECT' and plan['proposed_target']['first'][0]==0:
+        if plan['proposed_target']['kind'] in ('DIRECT_EFFECT','LOCAL_TOTAL_EFFECT') and plan['proposed_target']['first'][0]==0:
             return _execute_reverse_linear(plan,out,batch,source,request,original)
         inquiry=core.EffectsInquiryV21(batch,source,(request,))
         before=sha(_native_payload(inquiry))

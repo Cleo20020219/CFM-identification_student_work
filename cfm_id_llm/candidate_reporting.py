@@ -28,7 +28,7 @@ def render_candidate_text(routing: OrchestrationReportV02, report: CandidateRepo
         lines.extend([
             f"原目标：{d.target_kind.value} — {d.target_description}",
             f"LLM 的候选判断：{d.claimed_identification}（{d.scope}）",
-            f"A4 信息依据：{d.a4_used.source} / {d.a4_used.level.value if d.a4_used.level else "无"}",
+            f"A4 信息依据：{d.a4_used.source} / {d.a4_used.level.value if d.a4_used.level else '无'}",
         ])
         if d.admitted_assumptions_used:
             lines.append("实际引用的已接受 A5：" + ", ".join(d.admitted_assumptions_used))

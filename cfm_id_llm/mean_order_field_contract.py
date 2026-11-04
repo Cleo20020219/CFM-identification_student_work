@@ -28,7 +28,7 @@ class OrderClaim(NativeClaim):
                                     combination=combination_schema())]})
     nodes: list[str] | None = Field(description='该顺序条件适用的对象，不是本题评价子集。展开名单须引用名单定义；范围不明用null。')
     axis: NativeClaim.model_fields['axis'].annotation = Field(description='OWN：只改变本人，其他安排固定；PEERS：本人及其他安排固定，只增加一个合作邻居使用；轴不明为UNKNOWN。')
-    relation: NativeClaim.model_fields['relation'].annotation = Field(description='NONDECREASING：明确提出数值均值非减；NOT_ASSUMED：明确不采用该条件；UNKNOWN：尚未决定或含义未清。未提及不能补为不采用。NO_EFFECT是无影响，NONINCREASING是非增，均不得改写成不采用或非减。')
+    relation: NativeClaim.model_fields['relation'].annotation = Field(description='NONDECREASING：明确提出拟采用数值均值非减；这是所提条件的关系，不是批准状态。NOT_ASSUMED：明确不采用该条件；UNKNOWN：是否提出采用尚未决定或含义未清。明确提出拟采用与尚未决定采用不同。未提及不能补为不采用。NO_EFFECT是无影响，NONINCREASING是非增，均不得改写成不采用或非减。任何关系仍须独立科学审核才可用于求解。')
     level: NativeClaim.model_fields['level'].annotation = Field(description='约束均值为CONDITIONAL_MEAN，约束每次结果为EACH_OUTCOME，不自动弱化；未说清为UNKNOWN/null。relation为NOT_ASSUMED时必须null。')
     scope: NativeClaim.model_fields['scope'].annotation = Field(description='覆盖所有完整二元安排（含试点外）为ALL_BINARY_ASSIGNMENTS，仅试点为HISTORICAL_SUPPORT；未说清为UNKNOWN/null。relation为NOT_ASSUMED时必须null。')
     basis: NativeClaim.model_fields['basis'].annotation = Field(description='ASSUMPTION_STATEMENT包括提出、拒绝或尚未决定采用的科学声明；OBSERVED_PATTERN只是观察到的现象，不能转成科学许可；依据未明为UNKNOWN。')

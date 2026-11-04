@@ -125,7 +125,8 @@
         "tests_gateway/test_observational_method_diagnostics.py",
         "tests_gateway/test_network_mean_order_dispatch.py",
         "tests_gateway/test_observational_signature_entry.py",
-        "tests_gateway/test_contrast_conditioning.py"
+        "tests_gateway/test_contrast_conditioning.py",
+        "tests_gateway/test_local_total_effect.py"
       ]
     },
     {
@@ -237,7 +238,8 @@
         "tests_gateway/test_observational_signature_entry.py",
         "tests_gateway/test_mean_order_ownership.py",
         "tests_gateway/test_contrast_conditioning.py",
-        "tests_gateway/test_shared_fact_definitions.py"
+        "tests_gateway/test_shared_fact_definitions.py",
+        "tests_gateway/test_local_total_effect.py"
       ]
     }
   }

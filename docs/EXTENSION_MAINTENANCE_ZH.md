@@ -8,7 +8,7 @@
 |---|---|---|
 | 新业务进入系统 | `cfm_id.project` → `business_intake` → `business_dispatch` → `business_case` | 固定加载包内 `configuration/reading.json`；用户不预选数学方法 |
 | 已有数学能力登记 | `cfm_id.capability_registry` | 数学能力、共同入口、专门会话分别登记；登记不是科学许可 |
-| 事实读取组件登记 | `cfm_id_llm.fact_reading_contracts` | 五类 short_refs：政策均值、两政策差值、局部效应、R3 观察性政策、变量 DAG；配对请求、解析、来源、诊断、条件交接与重读 |
+| 事实读取组件登记 | `cfm_id_llm.fact_reading_contracts` | 八类 short_refs：政策均值、两政策差值、随机化局部效应、R3 观察性政策、变量 DAG、单个随机化臂均值、有限政策混合、观察性效应；配对请求、解析、来源、诊断、条件交接与重读 |
 | 推荐配置 | `cfm_id/configuration/reading.json` | 新应用只用这一处；复用已有协议，不声称首读最优 |
 | 兼容默认 | `ReadingConfig()`、`examples/legacy/configs/compatibility_default.json` | 不改变旧请求和旧检查点，不作为学生起点 |
 | 历史实验 | 旧协议说明（历史记录不随发布） | 用于显式复现；不能按版本号大小决定采用 |
@@ -96,4 +96,4 @@ R3观察性完整政策的记录适配位于`observational_diagnostics`：完整
 `local-role-ownership-4` 是本轮冻结局部效应实验配置，不替换兼容默认或早期政策配置。`cfm_id.reading_information_consistency` 处理已审阶段之间的声明矛盾，属于运行流程；它不属于 Prompt、不读取自然语言，也不是总体信息的科学验证器。
 
 
-来源审核扩展见[事实来源合同](FACT_SOURCE_REVIEW_ZH.md)。新增事实字段要说明其归属、未知状态、直接引用及显式定义依赖；整份材料完整性另审，不能靠只展示已填字段证明无遗漏。格式模型由 `fact_wire_models` 按已有请求/解析配对选择；五类 short_refs 事实家族均消费 `fact_reading_contracts` 的同一格式模型，不能另建不一致的宽松模型。`source_review` 为显式调用参数；下游审核必须绑定原答和该记录。新来源规则不自动补写候选，不得把来源审核升级为科学批准。
+来源审核扩展见[事实来源合同](FACT_SOURCE_REVIEW_ZH.md)。新增事实字段要说明其归属、未知状态、直接引用及显式定义依赖；整份材料完整性另审，不能靠只展示已填字段证明无遗漏。格式模型由 `fact_wire_models` 按已有请求/解析配对选择；各 short_refs 事实家族均消费 `fact_reading_contracts` 为其登记的格式模型，不能另建不一致的宽松模型。`source_review` 为显式调用参数；下游审核必须绑定原答和该记录。新来源规则不自动补写候选，不得把来源审核升级为科学批准。

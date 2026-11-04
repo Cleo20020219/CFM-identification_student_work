@@ -4,7 +4,7 @@
 
 ## 开发与发布的关系
 
-- **负责人维护源码**：仍在原团队工作区 `autoCFM_Research/research/identification/causal_idfm/`，没有迁移日常开发位置。
+- **负责人维护源码**：在本机当前维护工作区的 `autoCFM_pipeline/identification/` 中开发；独立网页维护在其中的 `demo/`。旧的 `research/identification/causal_idfm/` 路径已归档，不再作为开发入口。
 - **本仓库**：独立 Git 发布与学生协作副本。学生 clone 后在自己的分支开发，向本仓库提交 PR。
 - **同步方向**：负责人审核学生改动后合并回维护源码，验收后再同步到发布副本；避免两处各自长期演进。替换发布工作区前先备份，并核对未提交改动和待合并贡献。
 - **文档差异**：发布副本的 README、学生入口、贡献规则及 CI 按仓库根目录使用。数学代码、Prompt、协议和推荐配置保持与本轮维护源码一致。
@@ -24,6 +24,7 @@
 | `tests/`、`tests_gateway/` | 数学/兼容测试与读取/审核/链路测试 |
 | `docs/` | 当前操作、数学合同与扩展规则 |
 | `assets/` | 固定材料、Mock 和回归资源 |
+| `demo/` | 独立 ID 网页：业务输入、上传、必要追问、公式、条件和证书；不依赖全流程项目 |
 | `scripts/` | 构建、检查与测试薄入口 |
 | `identification_only/`、`predevelopment/`、`research_partial/` | 历史接口及原型，保留兼容；不作为新正式能力开发起点 |
 | `.github/` | 根目录 CI 与 PR 模板 |

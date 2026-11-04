@@ -39,6 +39,8 @@ class Scope(StrictRecord):
     latent_causes_accounted:Claim=Field(description='是否明确说明遗漏共同原因已排除或全部显式列出。')
     independent_errors:Claim
     perfect_intervention:Claim
+    no_between_unit_interference:Claim|None=Field(default=None,exclude_if=lambda value:value is None,
+        description='对象之间的干扰边界：原文明确无跨对象干扰或明确拟采用该条件，value为true；明确存在跨对象干扰为false；已讨论但尚未决定为null。原文未讨论本项时整个字段可省略/null。此项与变量DAG的直接边不同，不放入additional_restrictions；true仅记录声明，科学有效性仍待独立审核。')
 
 
 class Target(StrictRecord):
@@ -156,7 +158,8 @@ def parse(bundle,wire):
         value=getattr(c.target,name)
         if value is not None and value not in names:raise ReadingError('UNKNOWN_TARGET_VARIABLE')
     sources(c.target.source_ids,c.target.kind!='UNKNOWN' or c.target.treatment is not None or c.target.outcome is not None)
-    for claim in [*c.scope.__dict__.values(),c.information.positivity]:sources(claim.source_ids,claim.value is not None)
+    for claim in [*c.scope.__dict__.values(),c.information.positivity]:
+        if claim is not None:sources(claim.source_ids,claim.value is not None)
     sources(c.information.source_ids,c.information.kind!='UNKNOWN' or bool(c.information.variables))
     if len(set(c.information.variables))!=len(c.information.variables) or not set(c.information.variables)<=set(names):
         raise ReadingError('INVALID_INFORMATION_VARIABLES')

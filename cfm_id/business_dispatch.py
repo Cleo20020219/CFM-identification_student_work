@@ -78,7 +78,14 @@ def _fact_request(bundle, binding, reader_id, reference_format, query, contexts,
     # Preserve the public diagnostic before the common registry checks metadata.
     if reader_id == 'VARIABLE_DAG_FACTS' and reference_format not in ('short_refs', 'source_hash'):
         raise ValueError('UNKNOWN_FACT_REFERENCE_FORMAT')
-    network = reader_id in ('NETWORK_FIXED_POLICY_FACTS', 'NETWORK_POLICY_CONTRAST_FACTS', 'NETWORK_RANDOMIZED_EFFECT_FACTS', 'NETWORK_OBSERVATIONAL_POLICY_FACTS')
+    try:
+        network = capabilities.business_binding(reader_id).structure == 'UNIT_NETWORK'
+    except capabilities.RegistryError as exc:
+        # Registration lookup must preserve the caller-facing unknown-reader
+        # diagnostic. Other registry defects remain explicit wiring errors.
+        if str(exc) == 'UNREGISTERED_BUSINESS_READER':
+            raise ValueError('UNKNOWN_FACT_READER') from exc
+        raise
     from cfm_id_llm.fact_reading_contracts import contract_for_entry
     reading_contract = contract_for_entry(dict(reader_id=reader_id,reference_format=reference_format,
                                               network_fact_contract=network_fact_contract, observational_fact_profile=observational_fact_profile))
@@ -115,6 +122,10 @@ def _fact_request(bundle, binding, reader_id, reference_format, query, contexts,
         focus['reviewed_target_context'] = deepcopy(reviewed_target_context)
         if reading_contract is not None and reading_contract.target_context is not None:
             request = reading_contract.target_context.clarify_request(request)
+        elif reader_id == 'NETWORK_RANDOMIZED_EFFECT_FACTS':
+            from cfm_id_llm import network_effect_conditioning
+            if network_effect_conditioning.has_explicit_context(reviewed_target_context):
+                request = network_effect_conditioning.clarify_request(request)
     if reviewed_intent is not None:
         from cfm_id_llm.reviewed_intent_handoff import attach
         request=attach(request,reviewed_intent,binding)

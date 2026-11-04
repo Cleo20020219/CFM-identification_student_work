@@ -44,7 +44,7 @@ SEMANTICS = (
     Field('aggregation', '目标结果量及汇总方式、权重；也包括单对象的明确均值/概率。', '尚未决定的权重不是已知值，保留UNKNOWN；不写识别求解公式。', section='semantics', wire_description='目标明确要求的汇总运算和权重，例如全体等权均值；不写识别公式。未指定就UNKNOWN。', question='整体结果按什么方式汇总，各对象是否等权？'),
     Field('time_horizon', '目标评价的时点或时间段。', '不能用历史观测时间补未来时点。', section='semantics', question='希望评价实施后的哪个时点或时间段？'),
     Field('policy_assignment', '完整指定名单或随机政策；选择政策时保留约束。', '评价子集不缩减完整处理安排；编码/名单若写入value也须有引用。', section='semantics', allows_inapplicable=True, question='希望评价哪项分配规则，或在什么约束下选择名单？'),
-    Field('standardization_distribution', '目标明确要求按什么分布平均。', '不能从已有总体分布或历史抽签分布反推目标；不改变已指定权重。', section='semantics', wire_description='仅填目标明确要求按某分布平均的口径；已有联合总体信息、指定控制变量均不填这里。未指定就UNKNOWN。'),
+    Field('standardization_distribution', '目标明确要求对协变量取值、同伴状态或其余完整安排按什么分布平均。', '跨研究对象的等权或加权汇总只放aggregation，不在此重复；未另行指定分布时UNKNOWN。不能从已有总体分布或历史抽签分布反推目标，不改变已指定权重。', section='semantics', wire_description='仅填目标明确要求按某分布平均的口径；已有联合总体信息、指定控制变量均不填这里。未指定就UNKNOWN。'),
 )
 
 QUERY = (

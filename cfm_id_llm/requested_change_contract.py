@@ -17,7 +17,7 @@ POSITIONS={'INCREASE':('evaluated','reference'),'REDUCTION':('reference','evalua
 omitted_semantics=ordered.omitted_semantics
 apply_gate=ordered.apply_gate
 EXTRA_STATE_RULES=ordered.EXTRA_STATE_RULES
-GUIDANCE='''局部DIRECT_EFFECT/SPILLOVER_EFFECT使用comparison_request，分别填写reference、evaluated、quantity、refs。
+GUIDANCE='''局部DIRECT_EFFECT/SPILLOVER_EFFECT/LOCAL_TOTAL_EFFECT使用comparison_request，分别填写reference、evaluated、quantity、refs。LOCAL_TOTAL_EFFECT的两端同时写本人和同伴状态，不能改写为完整固定政策。
 reference是比较的参照状态，evaluated是相对于参照被评价的状态，不是被减数和减数。依据原文角色：采用B相比保持A，reference=A、evaluated=B；从A变到B同理。不要按结果好坏或编码大小调换角色。
 quantity描述用户请求的量：增加/多出多少为INCREASE，减少/少了/节省多少为REDUCTION，方向未给或明确未定为UNSPECIFIED。不要将所有效应统一理解为采用措施减不采用。INCREASE编译为evaluated减reference；REDUCTION编译为reference减evaluated，均允许结果为负。
 原文明确X减Y时优先保留算式。已有参照角色时选择REFERENCE_MINUS_EVALUATED或EVALUATED_MINUS_REFERENCE；没有指定角色时可将X作为reference、Y作为evaluated并选择REFERENCE_MINUS_EVALUATED。不得因附近的增加、减少或改善词改变显式算式。

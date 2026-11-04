@@ -42,6 +42,14 @@ def parse(entry, raw):
 
 
 def field_constraints(entry, paths):
+    from .. import network_effect_conditioning
+    rows = _field_constraints(entry, paths)
+    if network_effect_conditioning.has_explicit_context(entry.get('reviewed_target_context')):
+        rows += network_effect_conditioning.field_constraints(paths)
+    return rows
+
+
+def _field_constraints(entry, paths):
     if entry.get('effect_fact_contract')==scoped.VERSION:
         local=entry.get('reviewed_local_request')
         if local:

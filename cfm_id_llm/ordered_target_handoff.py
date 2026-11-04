@@ -41,6 +41,7 @@ SYSTEM = '''你从原始业务问题和材料中提取候选目标与共有事�
 目标类别：
 - 对象网络中逐个对象比较本人两种行动，同伴条件固定或按指定规则平均：DIRECT_EFFECT。再对对象等权平均仍是该类别。
 - 本人保持同一行动，比较合作对象的两种状态：SPILLOVER_EFFECT。本人状态未给仍保留这个目标及缺项，不能擅自选0或1。
+- 本人和同伴状态都改变、各端按原随机化设计条件平均的逐对象总效应：LOCAL_TOTAL_EFFECT；对这些局部差值等权平均仍属此类，两端均保留本人和同伴条件。
 - 全体对象的一份完整固定安排的均值：FIXED_POLICY_VALUE；两份完整固定安排的均值差：TOTAL_EFFECT。局部逐对象比较不等于两份全体名单。
 - 一份随机政策的价值：STOCHASTIC_POLICY_VALUE；选择政策：POLICY_OPTIMIZATION。后者的最优名单是待求结果，不因还未求出而补名单。
 - 给定本人状态及同伴暴露，只问一个局部平均结果：NETWORK_DESIGN_STANDARDIZED_ARM_MEAN。

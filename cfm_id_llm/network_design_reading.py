@@ -25,6 +25,27 @@ EXPOSURE_GROUPS = {
 D6_CONDITION = 'first_stage_profile_no_direct_outcome_effect'
 CORE_EXPOSURE = 'PRETREATMENT_CORE_COLLABORATOR_MAJORITY'
 
+
+def assignment_schema(schema):
+    """Publish the same mutually exclusive fields enforced by validation.
+
+    Missing active parameters remain nullable and require clarification. Only
+    inactive parameters are restricted to null; no design is inferred here.
+    """
+    props=schema.get('properties',{})
+    schema['allOf']=[
+        {'if':{'properties':{'kind':{'const':kind}},'required':['kind']},
+         'then':{'properties':{name:{'type':'null'} for name in ASSIGNMENT_FIELDS
+                               if name not in allowed and name in props}}}
+        for kind,allowed in DESIGN_FIELDS.items()]
+
+
+def validate_assignment_ownership(assignment):
+    allowed=DESIGN_FIELDS.get(assignment.kind)
+    if allowed is not None and any(getattr(assignment,k) is not None
+            for k in ASSIGNMENT_FIELDS if k not in allowed):
+        raise ValueError('CONFLICTING_DESIGN_FIELDS')
+
 ASSIGNMENT_GUIDANCE = '''assignment只读原试点的完整分配规则，不是未来政策。INDEPENDENT_BERNOULLI为逐对象独立抽签，probabilities按对象记录已知概率；UNIFORM_FIXED_QUOTA为均匀固定总名额，fixed_count记录名额。TWO_GROUP_FIXED_QUOTA为两个不交组各自均匀抽固定名额，MULTI_GROUP_FIXED_QUOTA为多个组的同类设计，groups与treated_quotas按相同顺序填写，各组抽取独立。CLUSTER_BERNOULLI为固定簇内对象一起处理、不同簇独立抽签，clusters与cluster_probabilities按相同顺序记录。TWO_STAGE_QUOTA_MIXTURE先按已知联合概率抽一个各组名额向量，再在各组均匀抽取且给定向量后各组独立；groups、quota_profiles、profile_probabilities保留原顺序与全部方案，不能用平均名额或组边际概率替代联合方案。分组或簇必须是原文明示的完整不交划分；无法对应的规则用OTHER，未说明用UNKNOWN；缺少必要参数保留null，不估计或补造。不属于所选设计的参数为null。assignment.source_ids覆盖设计、划分、名额或概率全部实际填写的事实。'''
 EXPOSURE_GUIDANCE = '''exposure只读原文明示的定义，不批准暴露充分性。STRICT_MAJORITY_TIES_LOW：处理邻居严格过半为1，平票及孤立点为0。THREE_LEVEL_TREATED_NEIGHBOR_FRACTION：比例小于1/3为0，至少1/3但小于2/3为1，至少2/3为2；孤立点未定义。PRETREATMENT_CORE_COLLABORATOR_MAJORITY：对原文指定的处理前核心同伴作严格多数分组，core_collaborators按每个对象列出非空邻居子集，不能自行选人。EXACT_TREATED_NEIGHBOR_COUNT：暴露值为使用的邻居人数。ANY_TREATED_NEIGHBOR：至少一名邻居使用为1，否则0。其他定义用OTHER，未说明用UNKNOWN；除核心同伴定义外core_collaborators=null。exposure.source_ids须覆盖定义及实际核心名单。LocalArm和总体均值格子的exposure使用该定义的真实状态，不一律限制成0/1；格子范围仅由原文提供的信息决定。'''
 STAGE_GUIDANCE = '''first_stage_exclusion独立记录原文是否采用“在最终完整处理名单相同的情况下，第一阶段抽到哪个配额方案不再直接影响结果”。它不是完整分配规律或随机化声明。D6需要这项条件；按原文填写ADOPTED/PROPOSED/NOT_ADOPTED/UNDECIDED/NOT_STATED/CONFLICTING及source_ids，不能由两阶段抽签本身推定。非D6且未提该条件时用null。读取状态不是科学批准，后续必须独立审核。'''
@@ -52,9 +73,7 @@ def missing_exposure(exposure, nodes):
 
 def validate_components(assignment, exposure, nodes, edges):
     """Reject contradictions in supplied values without filling absent values."""
-    allowed = DESIGN_FIELDS.get(assignment.kind)
-    if allowed is not None and any(getattr(assignment, k) is not None for k in ASSIGNMENT_FIELDS if k not in allowed):
-        raise ValueError('CONFLICTING_DESIGN_FIELDS')
+    validate_assignment_ownership(assignment)
     if assignment.probabilities is not None and (not set(assignment.probabilities) <= set(nodes)
             or any(not 0 <= Fraction(v) <= 1 for v in assignment.probabilities.values())):
         raise ValueError('INVALID_DESIGN_PROBABILITIES')

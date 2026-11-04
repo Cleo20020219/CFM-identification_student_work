@@ -240,7 +240,7 @@ def assemble_compact(case: BusinessCase, wire: CompactDraft, *, reference_contra
         'primary_query_id': 'q1', 'queries': queries}
 
 
-_EFFECTS = {TargetKind.DIRECT_EFFECT, TargetKind.SPILLOVER_EFFECT, TargetKind.TOTAL_EFFECT,
+_EFFECTS = {TargetKind.DIRECT_EFFECT, TargetKind.SPILLOVER_EFFECT, TargetKind.LOCAL_TOTAL_EFFECT, TargetKind.TOTAL_EFFECT,
     TargetKind.ATE, TargetKind.CATE}
 _POLICIES = {TargetKind.FIXED_POLICY_VALUE, TargetKind.STOCHASTIC_POLICY_VALUE, TargetKind.POLICY_OPTIMIZATION}
 _NO_COMPARISON = {TargetKind.NETWORK_DESIGN_STANDARDIZED_ARM_MEAN, TargetKind.FIXED_POLICY_VALUE,

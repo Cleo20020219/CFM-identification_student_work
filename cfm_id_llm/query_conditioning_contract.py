@@ -147,14 +147,19 @@ def target_context(raw_query, *, query_id):
 def admission(context, reader_id):
     """Typed scope guard, never interpretation of a claim's prose."""
     value = context['conditioning_context']
-    if reader_id == 'NETWORK_OBSERVATIONAL_POLICY_FACTS':
+    if reader_id in ('NETWORK_RANDOMIZED_ARM_FACTS','NETWORK_FINITE_POLICY_FACTS','NETWORK_OBSERVATIONAL_EFFECT_FACTS'):
+        # These contracts carry their own explicit averaging target, law and
+        # background. The fact and source reviews must compare all three.
+        if state(value)=='MISSING' or state(context['standardization_distribution'])=='MISSING':
+            return 'NEEDS_INPUT','TARGET_CONTEXT_OR_AVERAGING_UNRESOLVED'
+    elif reader_id == 'NETWORK_OBSERVATIONAL_POLICY_FACTS':
         if state(context['standardization_distribution']) in ('STATED', 'INTERPRETED'):
             return 'ADAPTER_NOT_CONNECTED', 'STANDARDIZED_OBSERVATIONAL_TARGET_NOT_CONNECTED'
         if state(context['standardization_distribution']) == 'MISSING':
             return 'NEEDS_INPUT', 'TARGET_STANDARDIZATION_UNRESOLVED'
         if state(value) not in ('STATED', 'INTERPRETED'):
             return 'NEEDS_INPUT', 'FIXED_CONDITIONING_TARGET_NOT_ESTABLISHED'
-    elif reader_id == 'NETWORK_POLICY_CONTRAST_FACTS':
+    elif reader_id in ('NETWORK_POLICY_CONTRAST_FACTS','NETWORK_FIXED_POLICY_FACTS'):
         if state(context['standardization_distribution']) in ('STATED', 'INTERPRETED'):
             return 'ADAPTER_NOT_CONNECTED', 'STANDARDIZED_CONTRAST_TARGET_NOT_CONNECTED'
         if state(context['standardization_distribution']) == 'MISSING':
@@ -163,6 +168,11 @@ def admission(context, reader_id):
             return 'NEEDS_INPUT', 'FIXED_CONDITIONING_TARGET_NOT_ESTABLISHED'
         # The contrast adapter requires separate target and conditional-model
         # reviews before compiling either endpoint. Presence is not approval.
+    elif reader_id == 'NETWORK_RANDOMIZED_EFFECT_FACTS':
+        # This family carries fixed study background W through its target and
+        # requires a separate scope/match review before native compilation.
+        if state(value) == 'MISSING':
+            return 'NEEDS_INPUT', 'FIXED_CONDITIONING_TARGET_NOT_ESTABLISHED'
     elif state(value) in ('STATED', 'INTERPRETED'):
         return 'ADAPTER_NOT_CONNECTED', 'CONDITIONED_TARGET_NOT_CONNECTED_TO_SELECTED_READER'
     return None

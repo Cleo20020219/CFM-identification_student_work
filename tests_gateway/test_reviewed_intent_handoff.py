@@ -6,7 +6,7 @@ from cfm_id import business_intake as intake,business_dispatch as dispatch,fact_
 from cfm_id import fact_reading_revision
 from cfm_id_llm import reviewed_intent_handoff as handoff
 from tests_gateway.test_target_first_native_compatibility import setup_target_first
-from tests_gateway.test_fact_source_review import record
+from tests_gateway.test_fact_source_review import record,forbid_method_calls
 from tests_gateway.test_business_field_review import sheet,record as field_record,submit
 from examples.network_dispatch_reference import approval_records
 
@@ -57,7 +57,7 @@ def test_reviewed_target_requires_alignment_then_preserves_native_claim(kind):
 @pytest.mark.parametrize('axis',['field_role','value_state','source_coverage'])
 def test_alignment_rejection_and_pending_stop_before_any_native_dispatch(monkeypatch,axis):
     s,e,o=setup();w=source.prepare(e,o['candidate']);r=record(w)
-    monkeypatch.setattr(dispatch.capabilities,'business_binding',lambda *_:pytest.fail('must stop before methods'))
+    forbid_method_calls(monkeypatch)
     for decision in ('REJECTED','PENDING'):
         r['decisions'][''][axis]=decision
         result=dispatch.execute(s,'q1',**o,source_review=r,research_protocol_selected=True)

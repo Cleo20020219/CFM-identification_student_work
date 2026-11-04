@@ -7,12 +7,13 @@ from copy import deepcopy
 from fractions import Fraction
 import json
 from typing import Literal
-from pydantic import Field, StrictInt
+from pydantic import Field, StrictInt, model_validator
 from .network_policy_reading import Record, Cited, Declaration, Study, Assignment, Exposure, FirstStageExclusion, Note, documents
 from . import network_design_reading as components
 from .network_statement_reading import DesignFacts, SelectedScienceStatements
 from .source_reference_wire import catalog, expand
 from . import effect_information_rules as information_rules
+from . import assumption_choices as choice_contract
 
 VERSION = 'network-randomized-effect-reading-1'
 
@@ -26,15 +27,26 @@ RESIDUAL_ROLES = {
     'additional_restrictions': (
         '仅保存结构化字段尚未表达的剩余主张，不是材料摘抄区。按主张判断，不按整段判断：'
         '一段话同时给出信息范围和一个均值上界时，范围进入information，只把上界及其适用对象/状态放这里。'
-        '真正新增的界、相等关系、单调性、无法由字段表达的科学条件或方法要求均须保留，包括当前不支持的条件。'
+        '真正新增的界、相等关系、单调性、无法由字段表达的科学条件或限定识别方法的要求均须保留，包括当前不支持的条件。'
+        '资料须审核、样本不能升级为总体、估计模型须核验适用性等流程说明，属于对应information的data_description，不是新增数学限制。科学条件未决定仍在其专门字段保留，不能改成流程说明。'
         '没有总体信息属于缺项，不是新增科学限制。原文中的“另有”“补充”“声明”不决定字段归属。'
         '所有内容已被其他字段完整表达时返回空列表；空列表不是对科学模型完整性的批准。'),
     'unresolved': (
-        '记录确实缺少或冲突的事实，不重复列出已经明确的信息性质。相关结构化字段仍保留UNKNOWN/null或实际缺少的范围。'
-        '若原文明说未提供、尚未决定或存在不同说法，text写明具体缺项/冲突，source_ids引用作出这些声明的原文。'
+        '只记录专门结构化字段尚未完整表达的缺项或冲突。scientific_statements或assumption_choices已经完整记录同一条件的未知、未决定、拒绝或冲突态度及来源时，不在这里重复。'
+        '这些专门字段的状态和来源必须保留；unresolved为空不表示条件已解决或已获批准，必要条件仍由其专门字段触发追问或阻断。尚未表达的额外对象、作用范围或限制不能省略。'
+        '对于需要在本列表补充的缺项，相关结构化字段仍保留UNKNOWN/null或实际缺少的范围；若原文明说未提供、尚未决定或存在不同说法，text写明具体缺项/冲突，source_ids引用作出这些声明的原文。'
         '只有材料完全未提及某项内容时，才可用空source_ids表示无可引用的声明；不得给未出现的话编造来源。'
         '未给出符号总体均值的数值不是缺项。没有另需说明的缺项或冲突时返回空列表。'),
 }
+
+DATA_DESCRIPTION_RULE = (
+    '仅保留本份信息的数据说明及其原文来源：观测/回访的取得方式、缺失值处理、'
+    '符号或数值表示、所提供分布的边界。已由operator、availability和覆盖字段表达的内容无需重复。'
+    '也保存本份资料的使用/审核说明，例如总体信息须独立审核、有限样本不能当作总体信息、估计模型须另行核验适用性；这些说明不表示审核已经完成。'
+    '这些说明会保留并交给数据审核，不作为因果识别假设，也不自动满足估计的观测条件。'
+    '对潜在结果、总体均值的界/等式/单调性，新的因果假设，以及改变目标或规定识别方法的要求，'
+    '必须进入additional_restrictions或已有专门字段，不能放在这里绕过审核。'
+    '同段包含数据说明和科学限制时分别保留各自主张；不能以整段归类而丢失真限制。')
 
 # Public field responsibilities, independent of case text and mathematical route.
 CITATION_GROUPS = {
@@ -47,8 +59,10 @@ CITATION_GROUPS = {
     'Exposure': {'source_ids': ['kind','core_collaborators']},
     'FirstStageExclusion': {'source_ids': ['status']},
     'SelectedStatement': {'source_ids': ['status']},
+    'AssumptionChoice': {'source_ids': ['condition', 'status', 'scope']},
     'EffectInformation': {'source_ids': ['operator','availability','outcome_nodes','arm_cells']},
     'Note': {'source_ids': ['text']},
+    'DataDescription': {'source_ids': ['text']},
 }
 
 
@@ -58,7 +72,7 @@ class LocalArm(Cited):
 
 
 class EffectTarget(Cited):
-    kind: Literal['DIRECT_EFFECT', 'SPILLOVER_EFFECT', 'OTHER', 'UNKNOWN']
+    kind: Literal['DIRECT_EFFECT', 'SPILLOVER_EFFECT', 'LOCAL_TOTAL_EFFECT', 'OTHER', 'UNKNOWN']
     operation: Literal['FIRST_MINUS_SECOND', 'OTHER', 'UNKNOWN']
     first: LocalArm
     second: LocalArm
@@ -74,6 +88,17 @@ class ArmCell(Record):
     node: str
     own: StrictInt
     exposure: StrictInt
+
+
+class DataDescription(Cited):
+    text: str = Field(pattern=r'\S')
+    source_ids: list[str] = Field(min_length=1, json_schema_extra={'uniqueItems': True})
+
+    @model_validator(mode='after')
+    def unique_sources(self):
+        if len(set(self.source_ids)) != len(self.source_ids):
+            raise ValueError('DATA_DESCRIPTION_REQUIRES_UNIQUE_SOURCES')
+        return self
 
 
 class EffectInformation(Cited):
@@ -92,6 +117,7 @@ class EffectInformation(Cited):
         'but its declared coordinate scope still belongs here. Partial scope stays partial. Pending conditions '
         'and extra restrictions do not erase known scope. Never invent undeclared cells. '
         'For other operators this list is empty; this does not erase their own operator or node scope.'))
+    data_description: list[DataDescription] = Field(default_factory=list, description=DATA_DESCRIPTION_RULE)
 
 
 class NetworkEffectReading(Record):
@@ -104,6 +130,7 @@ class NetworkEffectReading(Record):
     exposure: Exposure
     design_facts: DesignFacts
     scientific_statements: SelectedScienceStatements
+    assumption_choices: list[choice_contract.AssumptionChoice] = Field(default_factory=list, description=choice_contract.RULE)
     information: list[EffectInformation] = Field(description=RESIDUAL_ROLES['information'])
     additional_restrictions: list[Note] = Field(description=RESIDUAL_ROLES['additional_restrictions'])
     unresolved: list[Note] = Field(description=RESIDUAL_ROLES['unresolved'])
@@ -112,7 +139,7 @@ class NetworkEffectReading(Record):
 SYSTEM = '''你是网络干扰业务的事实读取助手。只按原文读取，不选择识别定理、不判断POINT、不授予科学许可。返回符合Schema的JSON。
 先记录用户要比较什么，再记录比较所需条件是否给齐。不要因为条件缺失而改写明确的业务目标。source_ids只使用本次source_catalog的s编号，reference_context照抄；此前助手提示不是事实来源。
 study保留完整对象名单、明确列出的无向边、处理和结果名称及其编码、期间与背景。没有明确完整边表时edge_list_complete=null，不自行补边。处理编码不附加到结果定义中。study.source_ids支持本记录实际写出的全部事实；如果context写入共同期间、共同背景或共同结果口径，需要把声明这些事实的原文也列入，不能仅引用介绍业务或列出网络的段落。
-target.first、second分别记录被减数、减数的自身处理own和同伴暴露exposure；开启为1、未开启为0。DIRECT_EFFECT比较同一暴露下自身开启与未开启，SPILLOVER_EFFECT比较自身状态相同时两种同伴暴露；不按句子出现顺序决定方向，不把未说明坐标补成0。first减second时operation=FIRST_MINUS_SECOND。
+target.first、second分别记录被减数、减数的自身处理own和同伴暴露exposure；开启为1、未开启为0。DIRECT_EFFECT比较同一暴露下自身开启与未开启，SPILLOVER_EFFECT比较自身状态相同时两种同伴暴露，LOCAL_TOTAL_EFFECT比较本人和同伴状态均改变的两端；不按句子出现顺序决定方向，不把未说明坐标补成0。first减second时operation=FIRST_MINUS_SECOND。
 population是事先固定的评价名单，不是本轮实际中签者或实际未中签者的名单。明确全体时展开完整名册，明确子集或单个对象时只列对应编号，未说明为null。aggregation分别保留SINGLE、EQUAL_MEAN或未知；population_fixed_before_assignment按原文独立填写，不能由名单存在推定。
 remaining_assignment只有原文明确在满足本人与同伴条件的完整安排中，按原试点抽签概率平均时才为ORIGINAL_DESIGN_CONDITIONAL，并用remaining_source_ids引用目标中的这项约定。试点曾经随机抽签，不代表用户已经选择这项目标；未说明为UNKNOWN，固定其他人、全员推广或另一个随机规则用OTHER，保留原意。它不是暴露充分性假设。
 target.source_ids共同支持kind、operation、population、aggregation：既包括比较目的与减法方向，也包括评价谁和怎样汇总。指定名单及平均方式可能在另一段材料中，必须在这里引用；population_fixed_before_assignment子记录中的引用不代替它。first和second各自引用用户要求该端自身状态、同伴状态的原文；只介绍工具、处理编码或分组定义的材料不足以说明用户选择了哪一端，必要时同时引用比较问题和编码/分组定义。shared_outcome_and_context独立记录两端是否明确使用同一结果定义、期间及研究背景；未说明为null，明确不同为false。
@@ -122,6 +149,7 @@ information保留每份信息的来源及覆盖范围，读取的是“材料提
 最后按residual_field_contract逐项核对主张归属，不按原文段落整段复制。information已完整表达的类型、可用性、对象和状态范围，不再成为additional_restrictions；不能仅因原文说“另有信息”就追加一条限制。同段内还有真正未表达的科学限制或具体数值时，只摘出这项剩余主张及其适用范围、引用，不能连同限制一起丢掉。
 unresolved的引用由缺项是怎样得知的决定：原文明说“未提供”“未决定”时引用这段原文；材料完全没提时才保留空来源，不制造证据。保留实际未知、未提供的范围与冲突，不把符号信息没有数值当作缺项。各字段无相应主张时用规定的null/UNKNOWN/空列表，不填职责口号或自评。格式正确和引用存在不代表语义正确，仍须独立审核。'''
 SYSTEM += "\n" + components.ASSIGNMENT_GUIDANCE + "\n" + components.EXPOSURE_GUIDANCE + "\n" + components.STAGE_GUIDANCE
+SYSTEM += "\n" + choice_contract.RULE
 
 
 def reference_catalog(bundle, *, binding):

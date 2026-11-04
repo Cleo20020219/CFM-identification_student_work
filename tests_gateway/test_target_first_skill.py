@@ -70,5 +70,7 @@ def test_request_has_value_examples_not_meta_objects_and_preserves_text():
 def test_target_role_definitions_match_schema_and_review():
     s,req,schema=prepared()
     for name,rule in skill.REVIEW_RULES.items():
-        assert schema['$defs']['CompactSemantics']['properties'][name]['description']==rule.meaning+' '+rule.excludes
+        owner='CompactQuery' if rule.section=='query' else 'CompactSemantics'
+        assert schema['$defs'][owner]['properties'][name]['description']==rule.meaning+' '+rule.excludes
         assert skill.review_definition(rule)['meaning']==rule.meaning
+        assert skill.recheck_field_roles(['/queries/0/'+('semantics/' if rule.section=='semantics' else '')+name])[0]['field_role']==rule.meaning+' '+rule.excludes

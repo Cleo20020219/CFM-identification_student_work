@@ -36,3 +36,25 @@ def prepare(entry, contract, decoded):
     item['scientific_requirements'] = dict(SCIENCE_REQUIREMENTS)
     item['native_context_field'] = 'study.context'
     return item
+
+
+def bind_single_policy(entry, contract, study, plan):
+    """Same fixed-context review for one policy; historical plans stay intact."""
+    from .business_dispatch import sha, worksheet
+    context=entry.get('reviewed_target_context')
+    if (entry.get('reader_id')!='NETWORK_FIXED_POLICY_FACTS' or not context
+            or conditioning.state(context['conditioning_context']) not in ('STATED','INTERPRETED')
+            or plan.get('state')!='REVIEW_REQUIRED' or 'plan_worksheet' not in plan):
+        return plan
+    if contract.target_context is None:raise ValueError('POLICY_FIXED_BACKGROUND_HANDOFF_REQUIRED')
+    item=contract.target_context.review_item(context,
+        dict(definition=study.context,source_ids=deepcopy(study.source_ids)))
+    item.update(scientific_requirements=dict(SCIENCE_REQUIREMENTS),native_context_field='study.context')
+    result=deepcopy(plan);result['target_conditioning_review']=item
+    for row in result['methods']:
+        binding=sha(dict(previous=row['reading_worksheet']['binding_sha256'],target_context=item))
+        row['reading_worksheet']=worksheet(binding,(*row['reading_worksheet']['decisions'],item['decision']))
+        row['science_worksheet']=worksheet(binding,(*row['science_worksheet']['decisions'],*SCIENCE_REQUIREMENTS))
+    binding=sha(dict(previous=plan['plan_sha256'],target_context=item,methods=result['methods']))
+    result.update(plan_sha256=binding,plan_worksheet=worksheet(binding,plan['plan_worksheet']['decisions']))
+    return result

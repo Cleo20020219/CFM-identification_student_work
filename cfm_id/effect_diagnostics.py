@@ -10,7 +10,7 @@ from .business_dispatch import sha
 
 
 def _last_stage(target):
-    return ('LINEAR_COMPOSITION' if target['kind'] == 'DIRECT_EFFECT' and target['first'][0] == 0
+    return ('LINEAR_COMPOSITION' if target['kind'] in ('DIRECT_EFFECT','LOCAL_TOTAL_EFFECT') and target['first'][0] == 0
             else 'COMPOSITION')
 
 
@@ -50,7 +50,8 @@ def check_answer(plan, answer, attempt):
                 or not attempt or attempt['state'] != 'POINT'):
             raise ValueError('target or execution')
         if ((target['kind'] == 'DIRECT_EFFECT' and not (first[0] != second[0] and first[1] == second[1]))
-                or (target['kind'] == 'SPILLOVER_EFFECT' and not (first[0] == second[0] and first[1] != second[1]))):
+                or (target['kind'] == 'SPILLOVER_EFFECT' and not (first[0] == second[0] and first[1] != second[1]))
+                or (target['kind'] == 'LOCAL_TOTAL_EFFECT' and not (first[0] != second[0] and first[1] != second[1]))):
             raise ValueError('effect kind')
         claim, certificate, native = (answer[k] for k in ('mathematical_claim','certificate','native_evidence'))
         if (claim['kind'] != 'POINT' or certificate['verification_status'] != 'VERIFIED'
@@ -72,7 +73,7 @@ def check_answer(plan, answer, attempt):
                     or certificate['bundle_sha256'] != bundle['bundle_sha256']):
                 raise ValueError('bundle')
             proof = bundle['results'][0]; request = bundle['requests'][0]
-            kind = 'DIRECT' if target['kind'] == 'DIRECT_EFFECT' else 'SPILLOVER'
+            kind = {'DIRECT_EFFECT':'DIRECT','SPILLOVER_EFFECT':'SPILLOVER','LOCAL_TOTAL_EFFECT':'TOTAL'}[target['kind']]
             if (sha(proof['source_batch']) != sha(bundle['source_batch'])
                     or sha(proof['a4_source']) != sha(bundle['a4_source']) or request['kind'] != kind):
                 raise ValueError('bundle inputs')
@@ -103,7 +104,8 @@ def effect_view(plan):
         origin='CURRENT_NATIVE_PLAN', checked_here=False,
         target_prepared=bool(target),
         definitions=dict(DIRECT_EFFECT='同伴状态相同，比较自身两种处理状态；保留第一端减第二端。',
-                         SPILLOVER_EFFECT='自身处理相同，比较两种同伴状态；保留第一端减第二端。'),
+                         SPILLOVER_EFFECT='自身处理相同，比较两种同伴状态；保留第一端减第二端。',
+                         LOCAL_TOTAL_EFFECT='自身和同伴状态均改变的设计平均局部总效应，不是完整固定政策差值。'),
         averaging_note='本方法要求：其余完整安排在各端自身/同伴条件下按原试点概率平均；是否已声明见原生目标，不补填未知规则，也不假定均值仅依赖暴露。',
         population_note='评价全体、指定子集或单个对象均保留原声明；名单须在分配前固定。')
 
@@ -115,6 +117,7 @@ def decorate(item, plan, answer, result=None):
     item['anchor_is_complete_effect'] = False
     item['target_semantics_note'] = 'R1a原设计条件平均；不将局部效应替换为固定政策差值或均值充分性目标。'
     if answer:
-        item['certificate']['calculation_reported'] = ('REVERSED_DIRECT_NATIVE_LINEAR_COMPOSITION'
+        item['certificate']['calculation_reported'] = (('REVERSED_TOTAL_NATIVE_LINEAR_COMPOSITION'
+            if target['kind']=='LOCAL_TOTAL_EFFECT' else 'REVERSED_DIRECT_NATIVE_LINEAR_COMPOSITION')
             if _last_stage(target) == 'LINEAR_COMPOSITION' else 'NATIVE_NAMED_EFFECT_COMPOSITION')
         item['certificate']['target_fingerprint'] = answer['mathematical_claim']['target_fingerprint']

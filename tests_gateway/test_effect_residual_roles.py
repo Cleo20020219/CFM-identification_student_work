@@ -21,7 +21,9 @@ def test_public_roles_match_the_actual_schema_without_new_output_fields():
     # D6 added a nullable scientific declaration shared by all design schemas.
     # This D1 fixture may omit it; D6 admission still requires independent review.
     assert raw['assignment']['kind'] == 'INDEPENDENT_BERNOULLI'
-    assert set(raw) == set(schema['properties']) - {'first_stage_exclusion'}
+    assert set(raw) == set(schema['properties']) - {'first_stage_exclusion', 'assumption_choices'}
+    assert 'assumption_choices' not in schema['required']
+    assert reading.NetworkEffectReading.model_validate(raw).assumption_choices == []
     assert 'first_stage_exclusion' not in schema['required']
     assert schema['properties']['first_stage_exclusion']['default'] is None
 
