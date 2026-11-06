@@ -320,16 +320,94 @@ _policy_formula 按非零权重生成项。
 测试通过不等于一般数学证明，
 也不能替代本任务独立建立的参考计算与证书检查。
 
-明日优先阅读：
+#### 专项测试阅读清单
 
-- test_all_designs_point_and_independent_oracle
-- test_reconstructed_invalid_saved_result_even_with_fake_digest
-- test_weights_are_exact_and_zero_weight_nodes_not_required
+- [x] `test_all_designs_point_and_independent_oracle`。已追踪两个参考函数，确认条件化计算直接复用了 `oracle_policy`。
+- [x] `test_reconstructed_invalid_saved_result_even_with_fake_digest`。已确认测试修改了公式、重算了摘要，并检查重放是否以 `POLICY_CERTIFICATE_REPLAY_MISMATCH` 拒绝。
+- [x] `test_weights_are_exact_and_zero_weight_nodes_not_required`。已确认测试检查了零权重节点可省略 A4、保留节点及其精确权重，以及所需可观测项的数量。
 
-目的：
+### 13. R1b 已有专项测试审读
 
-确认已有独立计算是否复用待审逻辑，
-错误证书如何构造，以及实际拒绝原因。
+测试文件：`tests/test_verified_fixed_policy_r1b.py`。
+
+#### 参考计算测试
+
+已审读 `test_all_designs_point_and_independent_oracle` 及其两个参考函数。
+
+`oracle_conditional_observable` 在命中目标安排时，直接用 `oracle_policy`
+构造分子。目标安排概率为正时，这个概率在分子和分母中抵消。
+因此，这条断言核对了条件化计算的一致性，但没有独立核对概率数值，
+也没有直接检查证书中的 `identified_functional`。
+
+#### 修改公式后重新计算摘要的测试
+
+已审读 `test_reconstructed_invalid_saved_result_even_with_fake_digest`。
+
+测试先生成一份合法的 R1b 结果，再把 `identified_functional`
+改成 `FALSE POLICY FORMULA`，并根据修改后的内容重新计算证书摘要。
+
+测试要求重放拒绝该结果，拒绝原因为
+`POLICY_CERTIFICATE_REPLAY_MISMATCH`。这表明该用例覆盖了摘要相符后，
+重放通过重新求解和比较发现公式被修改的情况。
+
+当前范围：这个用例检查的是将公式替换成明显错误的字符串。
+尚未自行构造外观合法、但节点、权重或目标安排有误的公式进行专项核查。
+#### 精确权重与零权重节点测试
+
+已审读 `test_weights_are_exact_and_zero_weight_nodes_not_required`。
+
+测试为四个节点分别设置 `2/3、0、1/3、0` 的权重，A4 只提供
+`a` 和 `c` 的信息。签发成功后，测试检查 `weighted_nodes`
+为 `('a', 'c')`，`node_weights` 为 `('2/3', '1/3')`，
+并检查 `required_observables` 恰有两项。
+
+覆盖边界：测试未逐项检查 `required_observables` 的节点和条件，
+也未直接检查 `identified_functional` 中的节点、权重及目标安排。
+末尾的 oracle 比较仍复用了 `oracle_policy`。
+#### 手写参考公式与程序输出对照
+设节点顺序为 `(a,b,c,d)`，权重为 `(2/3,0,1/3,0)`，
+目标安排为 `(1,0,1,0)`，研究背景为 `W=w`。
+
+预期 `identified_functional` 展开为：
+
+$$
+\frac{2}{3}E[Y_a^{obs}\mid \mathbf T=(1,0,1,0),\,W=w]
++
+\frac{1}{3}E[Y_c^{obs}\mid \mathbf T=(1,0,1,0),\,W=w].
+$$
+
+对照时检查：`a` 配 `2/3`，`c` 配 `1/3`，`b` 和 `d` 不出现在公式中，
+两项都使用同一个完整安排和研究背景。
+
+实际对照结果：
+
+- 节点顺序为 `(a,b,c,d)`，目标安排为 `(1,0,1,0)`，背景为 `W:business`。
+- `identified_functional` 包含两项：`a` 的系数为 `2/3`，`c` 的系数为 `1/3`。
+- `required_observables` 分别要求 `a` 和 `c` 的条件均值，两项的目标安排与背景均与输入一致。
+- 零权重节点 `b` 和 `d` 未出现在公式或所需可观测项中。
+
+结论：本例的符号公式和所需可观测项与手写预期逐项一致。
+#### 自建用例：交换公式中的节点权重
+
+沿用节点顺序 `(a,b,c,d)`、目标安排 `(1,0,1,0)` 和权重
+`(2/3,0,1/3,0)`。先重放原证书，结果为 `True`。
+
+随后只修改 `identified_functional`，将 `a` 的系数从 `2/3`
+改为 `1/3`，将 `c` 的系数从 `1/3` 改为 `2/3`，并用修改后的
+结果重新计算 `certificate_sha256`。
+
+实际结果：重放以 `POLICY_CERTIFICATE_REPLAY_MISMATCH` 拒绝。
+本例确认：摘要相符时，重放仍能发现保存公式中的节点与权重配对错误。
+#### D1 完整安排概率的独立计数核对
+
+节点顺序为 `(a,b,c,d)`，处理概率为 `(1/3,1/2,2/3,1/4)`，
+目标安排为 `(1,0,1,0)`。
+
+使用 Python 标准库枚举 72 种等可能抽签组合，其中 6 种符合目标安排。
+独立参考概率为 `1/12`，R1b 证书的 `assignment_probability`
+同为 `1/12`，精确分数比较结果为 `True`。
+
+参考概率通过枚举计数得到。本次核对覆盖该 D1 用例的完整安排概率。
 ## 四、PARTIAL 示例初读：D2/E1 单政策界
 
 ### 1. 示例位置与路线
@@ -569,13 +647,62 @@ sharp 性需要构造满足全部条件的完整潜在结果模型。
 尚未审读求解器、验证器和专项测试，
 尚未编写本任务独立计算程序。
 
-明日关注：
+#### 验证器审查进度
 
-- 核对重放的独立枚举是否实际实现；
-- 核对支持概率与严格多数规则；
-- 检查全部 A4 约束及端点世界；
-- 检查均值界与逐结果界的区别；
-- 检查共享输入校验的共同失误风险。
+- [x] 独立复算七网点案例的目标状态支持概率与区间端点值。结果见第 13 小节。
+- [x] 阅读 `cfm_id/bounded_policy_verify.py` 的 `replay` 和 `_check`。
+  `_check` 自行枚举完整二元安排，筛出满足 D2 固定名额的名单，
+  按邻接关系重算严格多数暴露和各状态的支持概率。
+- [x] 确认代码逐项核对上下端点世界的有效均值界与全部已声明的 A4 条件，
+  并将两张均值表分别代入政策目标，检查是否达到证书所报的端点。
+- [x] 阅读 `cfm_id/bounded_policy_contract.py` 的 `validate_model`。
+  对二元结果，条件均值界与 `[0,1]` 取交集。逐结果界先筛选 `{0,1}`
+  中允许的结果，再取允许值的最小值和最大值作为有效均值界。
+  若没有允许值，返回 `INCOMPATIBLE / EMPTY_BINARY_OUTCOME_SUPPORT`。
+- [x] 运行两类边界的对照用例。`[1/4,3/4]` 作为条件均值界时得到
+  `[13/28,15/28]`，作为逐结果界时触发 `EMPTY_BINARY_OUTCOME_SUPPORT`。
+  见第 15 小节。
+- [x] 构造满足 A4 和有效均值界、却达不到声称下界的证书。
+  重算摘要后，原证书重放通过，修改版被拒绝。见第 14 小节。
+### 13. 七网点 D2/E1 单政策界的独立复算
+
+使用 Python 标准库枚举七个网点中恰好三个接受处理的全部 35 份名单。
+按星形网络逐节点计算严格多数暴露，统计各网点达到全用政策所需
+状态 `(1,1)` 的次数。
+
+- 命中次数按中心、网点1至网点6排列，为 `[0,5,5,5,5,5,5]`。
+- 参考支持概率为中心 `0`、六个外围网点各 `1/7`，与证书逐项一致。
+- 六个外围网点的目标均值各为 `1/2`，中心的目标均值在 `[0,1]` 内。
+  由此独立算得政策均值区间 `[3/7,4/7]`，与系统输出一致。
+
+运行结果为 `Support match: True`、`Interval match: True`。
+本次比较覆盖七个目标状态的支持概率和区间端点值。
+证书中用于实现端点的两张均值表，留待验证器专项检查。
+
+### 14. 自建用例：下界世界达不到声称端点
+
+使用 `tests_gateway/test_bounded_policy.py` 中的 `model("star7", None)`
+生成七网点用例。原证书的区间为 `[3/7,4/7]`，重放返回 `True`。
+
+复制证书，将中心 `H` 在 `(1,1)` 状态下的 `lower_world` 从 `0`
+改为 `1/2`，保留声称的下界 `3/7`，并重新计算证书摘要。
+
+中心该状态没有 A4 固定值，`1/2` 也在有效均值界 `[0,1]` 内。
+但修改后的下界世界给出 `(6 × 1/2 + 1/2) / 7 = 1/2`，
+达不到声称的下界 `3/7`。修改版重放实际返回 `False`。
+
+### 15. 二元结果的条件均值界与逐结果界对照
+
+沿用七网点 `star7` 用例，将中心 `H` 的边界设为 `[1/4,3/4]`。
+两个版本只改变 `bounds_kind`，保留相同的边界数值和其他输入。
+
+- `CONDITIONAL_MEAN`：求解得到 `[13/28,15/28]`。
+  六个外围网点的均值之和为 `3`，加上中心均值的下界或上界后，
+  分别除以 `7`，与手算一致。
+- `ALMOST_SURE_OUTCOME`：抛出 `BoundedPolicyUnavailable`，
+  原因为 `EMPTY_BINARY_OUTCOME_SUPPORT`。
+  中心的两个可能结果 `0` 和 `1` 均被给定区间排除。
+
 ## 五、缺条件停止示例初读
 
 ### 1. 示例位置
