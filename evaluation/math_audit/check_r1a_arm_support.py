@@ -16,6 +16,36 @@ def reference_support():
             hits += 1
     return Fraction(hits, len(allocations)), hits, len(allocations)
 
+def reference_arm_mean_and_observables():
+    """Compute the arm target and observed conditional means separately."""
+    nodes = ("0", "1", "2", "3")
+
+    def potential_outcome(treated):
+        return int("0" in treated and "1" in treated)
+
+    # The three equally likely assignments in the target arm.
+    arm_assignments = ({"0", "1"}, {"0", "2"}, {"0", "3"})
+    direct_value = Fraction(
+        sum(potential_outcome(treated) for treated in arm_assignments),
+        len(arm_assignments),
+    )
+
+    # Construct observed outcomes for all six equally likely trial lists.
+    counts = {}
+    successes = {}
+    for allocation in combinations(nodes, 2):
+        treated = set(allocation)
+        own = int("0" in treated)
+        exposure = int(len(treated & {"1", "2"}) > 1)
+        cell = ("0", own, exposure)
+        counts[cell] = counts.get(cell, 0) + 1
+        successes[cell] = successes.get(cell, 0) + potential_outcome(treated)
+
+    observed_means = {
+        cell: Fraction(successes[cell], count)
+        for cell, count in counts.items()
+    }
+    return direct_value, observed_means
 
 def main():
     from tests.test_randomized_arm_abstraction import (
@@ -55,7 +85,33 @@ def main():
     backend = RandomizedNetworkArmBackend()
     verifier = IdentificationVerifier()
     original = backend.solve(spec)
+    direct_value, observed_means = reference_arm_mean_and_observables()
+    query = original.query
+    actual_cell = (
+        query.target_node_id,
+        query.own_treatment_value,
+        query.exposure_value,
+    )
+    if actual_cell != ("0", 1, 0):
+        raise AssertionError(f"Unexpected result arm: {actual_cell}")
 
+    expected_observable = (
+        f"E_exp[{spec.query.outcome}_i^obs | W,G,"
+        f"{spec.query.treatment}_i=1,S_i=0], i=0"
+    )
+    if list(original.required_population_objects) != [expected_observable]:
+        raise AssertionError(
+            f"Unexpected observables: {original.required_population_objects}"
+        )
+
+    observed_value = observed_means[actual_cell]
+    if observed_value != direct_value:
+        raise AssertionError(
+            f"Direct arm value {direct_value} != observed mean {observed_value}"
+        )
+
+    print(f"Direct design-standardized arm mean: {direct_value}")
+    print(f"Observed mean for the returned arm: {observed_value} - match")
     # These probabilities multiply correctly but disagree with the design.
     wrong_support = ArmSupportEvidence(
         Fraction(1, 2), Fraction(1, 2), Fraction(1, 4)

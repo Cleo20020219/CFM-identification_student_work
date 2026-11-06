@@ -16,6 +16,42 @@ def reference_formula(assignment):
         for node in NODES
     )
 
+def reference_policy_and_observables():
+    """Compute the direct policy value and observed means in a fixed stratum."""
+    types = range(8)
+
+    def potential_outcomes(assignment, kind):
+        a, b, c = assignment
+        return (
+            int(a == 1 and c == 1 and kind < 6),
+            int(a == 1 and b == 0 and kind < 3),
+            int(c == 1 and b == 0 and kind < 1),
+        )
+
+    # Direct calculation under the intervention T=TARGET.
+    direct = sum(
+        Fraction(sum(potential_outcomes(TARGET, kind)), len(NODES))
+        for kind in types
+    ) / len(types)
+
+    # Construct the observed population using independence within W=w0.
+    assignment_law = (
+        (OTHER_ASSIGNMENT, Fraction(1, 3)),
+        (TARGET, Fraction(2, 3)),
+    )
+    target_mass = Fraction(0)
+    success_mass = [Fraction(0) for _ in NODES]
+    for assignment, probability in assignment_law:
+        for kind in types:
+            outcomes = potential_outcomes(assignment, kind)
+            mass = probability / len(types)
+            if assignment == TARGET:
+                target_mass += mass
+                for index, outcome in enumerate(outcomes):
+                    success_mass[index] += mass * outcome
+
+    means = tuple(mass / target_mass for mass in success_mass)
+    return direct, means
 
 def main():
     from pfn_pipeline.identification_a4_shadow import _sha
@@ -46,6 +82,26 @@ def main():
         raise AssertionError("Unexpected observational probability")
     if result.identified_functional != reference_formula(TARGET):
         raise AssertionError(f"Unexpected formula: {result.identified_functional}")
+
+    direct_value, observed_means = reference_policy_and_observables()
+    observable_keys = [
+        f"E[Y_{{{node}}}^obs | T={TARGET}, W={CONTEXT}]" for node in NODES
+    ]
+    means_by_term = dict(zip(observable_keys, observed_means, strict=True))
+
+    formula_value = Fraction(0)
+    for term in result.identified_functional.split(" + "):
+        coefficient, observable = term.split(" * ", 1)
+        formula_value += Fraction(coefficient) * means_by_term[observable]
+
+    if formula_value != direct_value:
+        raise AssertionError(
+            f"Direct policy value {direct_value} != formula value {formula_value}"
+        )
+
+    print("Observed target means:", tuple(map(str, observed_means)))
+    print(f"Direct policy value: {direct_value}")
+    print(f"Project formula evaluated on population means: {formula_value} - match")
     if not replay_observational_policy_v23(result):
         raise AssertionError("Original certificate failed replay")
 

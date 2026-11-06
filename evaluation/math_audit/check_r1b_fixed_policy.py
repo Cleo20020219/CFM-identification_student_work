@@ -20,6 +20,41 @@ def reference_probability():
             hits += 1
     return Fraction(hits, total), hits, total
 
+def reference_policy_and_observables():
+    """Build a synthetic population and compute the two sides separately."""
+    types = range(4)  # Four equally likely outcome types.
+
+    def potential_outcomes(assignment, kind):
+        a, b, c, _ = assignment
+        # Outcomes can depend on another node's treatment.
+        return (
+            int(a == 1 and c == 1 and kind < 3),
+            int(c == 1 and b == 0 and kind == 0),
+        )
+
+    # Direct route: intervene first, then average the weighted outcomes.
+    direct_value = sum(
+        Fraction(2, 3) * y_a + Fraction(1, 3) * y_c
+        for y_a, y_c in (potential_outcomes(ASSIGNMENT, kind) for kind in types)
+    ) / len(types)
+
+    # Observable route: draw treatment independently of outcome type.
+    target_count = successes_a = successes_c = 0
+    for a, b, c, d, kind in product(
+        range(3), range(2), range(3), range(4), types
+    ):
+        assignment = (int(a < 1), int(b < 1), int(c < 2), int(d < 1))
+        if assignment == ASSIGNMENT:
+            y_a, y_c = potential_outcomes(assignment, kind)
+            target_count += 1
+            successes_a += y_a
+            successes_c += y_c
+
+    observed_means = (
+        Fraction(successes_a, target_count),
+        Fraction(successes_c, target_count),
+    )
+    return direct_value, observed_means
 
 def main():
     from pfn_pipeline.identification_a4_shadow import _sha
@@ -58,6 +93,22 @@ def main():
         raise AssertionError(f"Unexpected observables: {result.required_observables}")
     if result.identified_functional != expected_formula:
         raise AssertionError(f"Unexpected formula: {result.identified_functional}")
+    direct_value, observed_means = reference_policy_and_observables()
+    means_by_term = dict(zip(expected_observables, observed_means, strict=True))
+
+    formula_value = Fraction(0)
+    for term in result.identified_functional.split(" + "):
+        coefficient, observable = term.split(" * ", 1)
+        formula_value += Fraction(coefficient) * means_by_term[observable]
+
+    if formula_value != direct_value:
+        raise AssertionError(
+            f"Direct policy value {direct_value} != formula value {formula_value}"
+        )
+
+    print(f"Observed target means: a={observed_means[0]}, c={observed_means[1]}")
+    print(f"Direct policy value: {direct_value}")
+    print(f"Project formula evaluated on population means: {formula_value} - match")
     if not replay_verified_fixed_policy(result):
         raise AssertionError("Original certificate failed replay")
 
